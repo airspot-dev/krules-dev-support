@@ -121,6 +121,10 @@ def make_set_gke_contexts_recipe(project_name, targets, **recipe_kwargs):
             kubectl.config("rename-context", f"gke_{project}_{region_or_zone}_{cluster_name} {context_name}")
             kubectl.config("set-context", context_name, "--namespace", namespace)
 
+            kubectl_opts = sane_utils.get_var_for_target("kubectl_opts", target)
+            if kubectl_opts is None:
+                os.environ[f"{target.upper()}_KUBECTL_OPTS"] = f"--context={context_name}"
+
             if idx == 0:
                 kubectl.config("use-context", context_name)
 
