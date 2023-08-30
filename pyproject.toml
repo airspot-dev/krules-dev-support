@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "krules-dev-support"
-version = "0.12.2"
+version = "0.12.3"
 description = ""
 authors = ["Airspot <info@airspot.tech>"]
 license = "Apache-2.0"
@@ -8,7 +8,7 @@ readme = "README.md"
 packages = [{include = "krules_dev"}]
 
 [tool.poetry.dependencies]
-python = ">=3.9.2"
+python = ">=3.10"
 jinja2 = ">=3.0.1"
 sane-build = ">=7.2"
 sh = ">=2.0.4"
