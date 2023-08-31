@@ -98,19 +98,29 @@ def make_set_gke_contexts_recipe(project_name, targets, **recipe_kwargs):
     def set_gke_contexts():
         for idx, target in enumerate(targets):
             context_name = f"gke_{project_name}_{target.lower()}"
-            project = sane_utils.get_var_for_target("project_id", target, True)
+            project = sane_utils.get_var_for_target("cluster_project_id", target, False)
+            if not project:
+                project = sane_utils.get_var_for_target("project_id", target, True),
             cluster_name = sane_utils.get_var_for_target("cluster", target, True)
             namespace = sane_utils.get_var_for_target("namespace", target)
             if namespace is None:
                 namespace = "default"
-            region_or_zone = sane_utils.get_var_for_target("zone", target)
+            region_or_zone = sane_utils.get_var_for_target("cluster_zone", target)
             location_arg = "--zone"
             if region_or_zone is None:
-                region_or_zone = sane_utils.get_var_for_target("region", target, True)
-                location_arg = "--region"
+                region_or_zone = sane_utils.get_var_for_target("zone", target)
+                if region_or_zone is None:
+                    location_arg = "--region"
+                    region_or_zone = sane_utils.get_var_for_target("cluster_region", target)
+                    if region_or_zone is None:
+                        region_or_zone = sane_utils.get_var_for_target("region", target)
+            if region_or_zone is None:
+                log.error("Cluster location unknown, specify region or zone", target=target,
+                          cluster=cluster_name, project=project)
+                sys.exit(-1)
             log.info(
                 f"Setting context for cluster",
-                context=context_name, region_or_zone=region_or_zone, cluster=cluster_name, project=project,
+                context_name=context_name, region_or_zone=region_or_zone, cluster=cluster_name, project=project,
                 namespace=namespace
             )
 
@@ -212,12 +222,8 @@ def make_target_deploy_recipe(
 
     if context_vars is None:
         context_vars = {}
-    #if extra_target_context_vars is None:
+    # if extra_target_context_vars is None:
     #    extra_target_context_vars = {}
-
-    abs_path = os.path.abspath(inspect.stack()[-1].filename)
-    root_dir = os.path.dirname(abs_path)
-    # targets = [s.lower() for s in re.split(" |,|;", os.environ.get("TARGETS", "default")) if len(s)]
 
     sources_ext = []
     origins = []
