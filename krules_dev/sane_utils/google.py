@@ -108,11 +108,13 @@ def make_set_gke_contexts_recipe(project_name, targets, **recipe_kwargs):
             region_or_zone = sane_utils.get_var_for_target("cluster_zone", target)
             location_arg = "--zone"
             if region_or_zone is None:
-                region_or_zone = sane_utils.get_var_for_target("zone", target)
+                location_arg = "--region"
+                region_or_zone = sane_utils.get_var_for_target("cluster_region", target)
                 if region_or_zone is None:
-                    location_arg = "--region"
-                    region_or_zone = sane_utils.get_var_for_target("cluster_region", target)
+                    location_arg = "--zone"
+                    region_or_zone = sane_utils.get_var_for_target("zone", target)
                     if region_or_zone is None:
+                        location_arg = "--region"
                         region_or_zone = sane_utils.get_var_for_target("region", target)
             if region_or_zone is None:
                 log.error("Cluster location unknown, specify region or zone", target=target,
