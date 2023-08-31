@@ -98,7 +98,9 @@ def make_set_gke_contexts_recipe(project_name, targets, **recipe_kwargs):
     def set_gke_contexts():
         for idx, target in enumerate(targets):
             context_name = f"gke_{project_name}_{target.lower()}"
-            project = sane_utils.get_var_for_target("project_id", target, True)
+            project = sane_utils.get_var_for_target("cluster_project_id", target, False)
+            if not project:
+                project = sane_utils.get_var_for_target("project_id", target, True),
             cluster_name = sane_utils.get_var_for_target("cluster", target, True)
             namespace = sane_utils.get_var_for_target("namespace", target)
             if namespace is None:
@@ -212,12 +214,8 @@ def make_target_deploy_recipe(
 
     if context_vars is None:
         context_vars = {}
-    #if extra_target_context_vars is None:
+    # if extra_target_context_vars is None:
     #    extra_target_context_vars = {}
-
-    abs_path = os.path.abspath(inspect.stack()[-1].filename)
-    root_dir = os.path.dirname(abs_path)
-    # targets = [s.lower() for s in re.split(" |,|;", os.environ.get("TARGETS", "default")) if len(s)]
 
     sources_ext = []
     origins = []
