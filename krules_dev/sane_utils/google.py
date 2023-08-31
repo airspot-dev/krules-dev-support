@@ -303,7 +303,6 @@ def make_target_deploy_recipe(
     else:
         kubectl_opts = []
 
-    os.unlink(os.path.join(root_dir, out_dir, "skaffold.yaml"))
     sane_utils.make_render_resource_recipes(
         globs=[
             "skaffold.yaml.j2"
