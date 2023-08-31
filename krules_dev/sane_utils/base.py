@@ -28,6 +28,9 @@ from structlog.contextvars import bind_contextvars, unbind_contextvars
 
 log = structlog.get_logger()
 
+abs_path = os.path.abspath(inspect.stack()[-1].filename)
+root_dir = os.path.dirname(abs_path)
+
 
 def recipe(*args, name=None, hooks=[], recipe_deps=[],
            hook_deps=[], conditions=[], info=None, **kwargs):
@@ -97,12 +100,9 @@ def load_env():
                 log.debug("Overriding environment", file=p)
                 load_dotenv(p, override=True)
 
-    # look for env files in caller directory
-    abs_path = os.path.abspath(inspect.stack()[-1].filename)
-    cur_dir = os.path.dirname(abs_path)
 
     # look for a project file
-    p = Path(cur_dir)
+    p = Path(root_dir)
     traversed_p = []
     while True:
         traversed_p.insert(0, p)
@@ -197,14 +197,6 @@ def get_buildable_image(location: str,
         sys.exit(-1)
     with open(os.path.join(build_dir, out_dir, digest_file), "r") as f:
         return f.read().strip()
-    # ret_code = _run([
-    #     os.path.join(build_dir, "make.py"), push_cmd
-    # ], env={"PATH": os.environ["PATH"]}, check=False)
-    # if ret_code == 0:
-    #     with open(os.path.join(build_dir, out_dir, digest_file), "r") as f:
-    #         return f.read().strip()
-    # else:
-    #     logger.error(f"Unable to push image : {docker_registry}/{name}")
 
 
 def get_image(image, environ_override: typing.Optional[str] = None):
@@ -265,8 +257,6 @@ def update_code_hash(globs: list,
             else:
                 _update_hash_within_dir(f)
 
-    abs_path = os.path.abspath(inspect.stack()[-1].filename)
-    root_dir = os.path.dirname(abs_path)
     Path(out_dir).mkdir(parents=True, exist_ok=True)
 
     files = []
@@ -287,9 +277,8 @@ def make_render_resource_recipes(globs: list,
                                  out_dir: str = ".build",
                                  context_vars: typing.Union[dict, typing.Callable[[], dict]] = {},
                                  run_before: typing.Sequence[typing.Callable] = (),
+                                 skip_unchanged=False,
                                  **recipe_kwargs):
-    abs_path = os.path.abspath(inspect.stack()[-1].filename)
-    root_dir = os.path.dirname(abs_path)
 
     def _context_vars():
         nonlocal context_vars
@@ -310,7 +299,8 @@ def make_render_resource_recipes(globs: list,
         recipe_kwargs['info'] = "Render '{template}'".format(template=j2_template)
         if 'conditions' not in recipe_kwargs:
             recipe_kwargs['conditions'] = []
-        recipe_kwargs['conditions'].append(resource_older_than_template)
+        if skip_unchanged:
+            recipe_kwargs['conditions'].append(resource_older_than_template)
         recipe_kwargs['name'] = resource_file
 
         @recipe(**recipe_kwargs)
@@ -348,8 +338,7 @@ def make_build_recipe(image_name: str = None,
                       build_args: dict = {},
                       target: str = os.environ.get("TARGET", "default"),
                       **recipe_kwargs):
-    abs_path = os.path.abspath(inspect.stack()[-1].filename)
-    root_dir = os.path.dirname(abs_path)
+
     Path(out_dir).mkdir(parents=True, exist_ok=True)
 
     if image_name is None:
@@ -428,8 +417,6 @@ def make_push_recipe(digest_file: str = ".digest",
                      dependent_build_recipe: str = "build",
                      target: str = os.environ.get("TARGET", "default"),
                      **recipe_kwargs):
-    abs_path = os.path.abspath(inspect.stack()[-1].filename)
-    root_dir = os.path.dirname(abs_path)
     Path(out_dir).mkdir(parents=True, exist_ok=True)
 
     if 'name' not in recipe_kwargs:
@@ -490,8 +477,6 @@ def make_push_recipe(digest_file: str = ".digest",
 
 def make_apply_recipe(globs: typing.Iterable[str], run_before: typing.Iterable[typing.Callable] = (), context=None,
                       **recipe_kwargs):
-    abs_path = os.path.abspath(inspect.stack()[-1].filename)
-    root_dir = os.path.dirname(abs_path)
 
     if 'name' not in recipe_kwargs:
         recipe_kwargs['name'] = 'apply'
@@ -513,8 +498,6 @@ def make_apply_recipe(globs: typing.Iterable[str], run_before: typing.Iterable[t
 
 
 def make_clean_recipe(globs, on_completed=lambda: None, **recipe_kwargs):
-    abs_path = os.path.abspath(inspect.stack()[-1].filename)
-    root_dir = os.path.dirname(abs_path)
 
     if 'info' not in recipe_kwargs:
         recipe_kwargs['info'] = "Clean up project"
@@ -565,10 +548,6 @@ def copy_resources(src: typing.Iterable[str], dst: str,
         workdir = os.path.abspath(inspect.stack()[1].filename)
     dest_dir = os.path.dirname(workdir)
 
-    # wi pushd(src_base_dir):
-    #       _recipe_before:
-    #         run(f"make
-    #         y {r)}", shell=True, check=True, capture_output=True)
     with pushd(dest_dir):
         os.makedirs(dst, exist_ok=True)
         for p in src:
@@ -602,31 +581,6 @@ def copy_resources(src: typing.Iterable[str], dst: str,
                     make = sh.Command("python").bake(make_py)
                     make(recipe)
 
-
-# def make_copy_resources_recipe(src: typing.Union[typing.Iterable[str], str],
-#                                dst: str,
-#                                render_first: bool,
-#                                **recipe_kwargs):
-#     make_recipes_before = []
-#     if render_first:
-#         make_recipes_before.append('{src}')
-#
-#     if 'name' not in recipe_kwargs:
-#         logger.error("You must provide a name for copy resources recipe")
-#         sys.exit(-1)
-#
-#     workdir = os.path.abspath(inspect.stack()[1].filename)
-#
-#     @recipe(**recipe_kwargs)
-#     def _recipe():
-#         copy_resources(
-#                 src=src,
-#                 dst=".",
-#                 make_recipes_before=make_recipes_before,
-#                 workdir=workdir
-#             )
-
-
 def copy_source(src: typing.Union[typing.Iterable[str], str],
                 dst: str,
                 override: bool = True,
@@ -644,7 +598,6 @@ def copy_source(src: typing.Union[typing.Iterable[str], str],
     """
     if isinstance(src, str):
         src = [src]
-    #src = list(map(lambda x: os.path.join(check_env("KRULES_REPO_DIR"), x), src))
 
     if workdir is None:
         workdir = os.path.abspath(inspect.stack()[1].filename)
@@ -679,21 +632,17 @@ def make_copy_source_recipe(location: str,
 def get_var_for_target(name: str, target: str, mandatory: bool = False, default=None) -> str | None:
     name = name.upper()
     target = target.upper()
-    #log_msg = "Got variable for target"
     var_name = f"{target}_{name}"
     if var_name in os.environ:
         var_name = f"{target}_{name}"
         value = os.environ[var_name]
-        #log.debug(log_msg, name=name, var_name=var_name, target=target)
         return value
     if name in os.environ:
-        #log.debug(log_msg, name=name, var_name=name, target=target)
         return os.environ[name]
     else:
         if mandatory:
             log.error(f"missing required environment variable", name=name)
             sys.exit(-1)
-    #log.debug("Got default variable for target", name=name, default=default)
     return default
 
 
@@ -726,8 +675,5 @@ def make_run_terraform_recipe(manifests_dir="terraform", init_params=(), **recip
         with pushd(manifests_dir):
             log.info("Applying terraform manifests...")
             terraform.init("--upgrade", *init_params, _fg=True)
-            # _run(f"{terraform} init --upgrade {' '.join(init_params)}")
             terraform.plan("-out=terraform.tfplan", _fg=True)
-            # _run(f"{terraform} plan -out=terraform.tfplan")
             terraform.apply("-auto-approve", "terraform.tfplan", _fg=True)
-            # _run(f"{terraform} apply -auto-approve terraform.tfplan")
