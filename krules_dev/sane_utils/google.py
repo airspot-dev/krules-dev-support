@@ -4,7 +4,7 @@ import logging
 import os
 import sys
 import re
-from typing import Callable
+from typing import Callable, NamedTuple, Literal, Tuple
 
 # from subprocess import run, CalledProcessError
 
@@ -33,6 +33,22 @@ def make_enable_apis_recipe(google_apis, project_id, **recipe_kwargs):
         for api in google_apis:
             log.debug(f"enable API...", api=api)
             gcloud.services.enable(api)
+
+
+def get_cluster_location_from_env(target: str) -> Tuple[Literal['zone', 'region'], str | None]:
+    location_type: Literal['zone', 'region'] = "zone"
+    region_or_zone = sane_utils.get_var_for_target("cluster_zone", target)
+    if not region_or_zone:
+        location_type = "region"
+        region_or_zone = sane_utils.get_var_for_target("cluster_region", target)
+        if not region_or_zone:
+            location_type = "zone"
+            region_or_zone = sane_utils.get_var_for_target("zone", target)
+            if not region_or_zone:
+                location_type = "region"
+                region_or_zone = sane_utils.get_var_for_target("region", target)
+
+    return location_type, region_or_zone
 
 
 def make_check_gcloud_config_recipe(project_id, region, zone, **recipe_kwargs):
@@ -105,17 +121,9 @@ def make_set_gke_contexts_recipe(project_name, targets, **recipe_kwargs):
             namespace = sane_utils.get_var_for_target("namespace", target)
             if namespace is None:
                 namespace = "default"
-            region_or_zone = sane_utils.get_var_for_target("cluster_zone", target)
-            location_arg = "--zone"
-            if not region_or_zone:
-                location_arg = "--region"
-                region_or_zone = sane_utils.get_var_for_target("cluster_region", target)
-                if not region_or_zone:
-                    location_arg = "--zone"
-                    region_or_zone = sane_utils.get_var_for_target("zone", target)
-                    if not region_or_zone:
-                        location_arg = "--region"
-                        region_or_zone = sane_utils.get_var_for_target("region", target)
+
+            location_arg, region_or_zone = get_cluster_location_from_env(target)
+
             if not region_or_zone:
                 log.error("Cluster location unknown, specify region or zone", target=target,
                           cluster=cluster_name, project=project)
@@ -129,7 +137,7 @@ def make_set_gke_contexts_recipe(project_name, targets, **recipe_kwargs):
             gcloud = sane_utils.get_cmd_from_env("gcloud").bake("--project", project)
             kubectl = sane_utils.get_cmd_from_env("kubectl", opts=False)
 
-            gcloud.container.clusters("get-credentials", cluster_name, location_arg, region_or_zone, _fg=True)
+            gcloud.container.clusters("get-credentials", cluster_name, f"--{location_arg}", region_or_zone, _fg=True)
 
             try:
                 kubectl.config("delete-context", context_name)
