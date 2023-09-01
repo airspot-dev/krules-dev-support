@@ -140,12 +140,17 @@ def check_cmd(cmd: str, err_code=-1):
 
 
 def get_targets_info():
-    target = os.environ.get("TARGET", os.environ.get("DEFAULT_TARGET", "default"))
+    target = os.environ.get("TARGET", os.environ.get("DEFAULT_TARGET", "default")).lower()
     targets = [s.lower() for s in re.split(" |,|;", os.environ.get("TARGETS", "default")) if len(s)]
 
+    allows_unknown = int(os.environ.get("ALLOWS_UNKNOWN_TARGET", "0"))
+
     if target not in targets:
-        log.error("Unknown target", target=target, targets=targets)
-        sys.exit(-1)
+        if allows_unknown:
+            targets.append(target.lower())
+        else:
+            log.error("Unknown target", target=target, targets=targets)
+            sys.exit(-1)
 
     return target, targets
 
