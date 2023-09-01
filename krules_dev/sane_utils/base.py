@@ -665,7 +665,10 @@ def get_target_dicts(targets: typing.Iterable, keys: typing.Iterable[str | list 
             if val is None:
                 val = os.environ.get(f"{k.upper()}")
             if val is None:
-                val = callable(default) and default(target) or default
+                if callable(default):
+                    val = default(target)
+                else:
+                    val = default
             dd[k] = val
 
         ret.append(dd)
