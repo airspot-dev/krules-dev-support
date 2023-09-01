@@ -100,23 +100,23 @@ def make_set_gke_contexts_recipe(project_name, targets, **recipe_kwargs):
             context_name = f"gke_{project_name}_{target.lower()}"
             project = sane_utils.get_var_for_target("cluster_project_id", target, False)
             if not project:
-                project = sane_utils.get_var_for_target("project_id", target, True),
+                project = sane_utils.get_var_for_target("project_id", target, True)
             cluster_name = sane_utils.get_var_for_target("cluster", target, True)
             namespace = sane_utils.get_var_for_target("namespace", target)
             if namespace is None:
                 namespace = "default"
             region_or_zone = sane_utils.get_var_for_target("cluster_zone", target)
             location_arg = "--zone"
-            if region_or_zone is None:
+            if not region_or_zone:
                 location_arg = "--region"
                 region_or_zone = sane_utils.get_var_for_target("cluster_region", target)
-                if region_or_zone is None:
+                if not region_or_zone:
                     location_arg = "--zone"
                     region_or_zone = sane_utils.get_var_for_target("zone", target)
-                    if region_or_zone is None:
+                    if not region_or_zone:
                         location_arg = "--region"
                         region_or_zone = sane_utils.get_var_for_target("region", target)
-            if region_or_zone is None:
+            if not region_or_zone:
                 log.error("Cluster location unknown, specify region or zone", target=target,
                           cluster=cluster_name, project=project)
                 sys.exit(-1)
@@ -126,7 +126,7 @@ def make_set_gke_contexts_recipe(project_name, targets, **recipe_kwargs):
                 namespace=namespace
             )
 
-            gcloud = sane_utils.get_cmd_from_env("gcloud")
+            gcloud = sane_utils.get_cmd_from_env("gcloud").bake("--project", project)
             kubectl = sane_utils.get_cmd_from_env("kubectl", opts=False)
 
             gcloud.container.clusters("get-credentials", cluster_name, location_arg, region_or_zone, _fg=True)
