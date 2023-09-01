@@ -4,7 +4,7 @@ FROM python:3.10-slim-bullseye
 # ARG CLOUD_SDK_VERSION
 ENV CLOUD_SDK_VERSION=433.0.1
 ENV PATH "$PATH:/opt/google-cloud-sdk/bin/"
-ENV INSTALL_COMPONENTS="kubectl google-cloud-cli-skaffold terraform"
+ENV INSTALL_COMPONENTS="kubectl google-cloud-cli-skaffold google-cloud-cli-gke-gcloud-auth-plugin terraform"
 COPY --from=static-docker-source /usr/local/bin/docker /usr/local/bin/docker
 COPY --from=static-docker-source /usr/local/libexec/docker/cli-plugins/docker-buildx /usr/local/libexec/docker/cli-plugins/docker-buildx
 RUN groupadd -r -g 1000 cloudsdk && \
@@ -37,4 +37,4 @@ RUN git config --system credential.'https://source.developers.google.com'.helper
 
 VOLUME ["/root/.config"]
 
-RUN pip3 install --upgrade pip && pip3 install krules-dev-support==0.12.5
+RUN pip3 install --upgrade pip && pip3 install krules-dev-support==0.12.9
