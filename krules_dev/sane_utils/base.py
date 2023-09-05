@@ -301,7 +301,7 @@ def make_render_resource_recipes(globs: list,
             )
         )
 
-        recipe_kwargs['info'] = "Render '{template}'".format(template=j2_template)
+        #recipe_kwargs['info'] = "Render '{template}'".format(template=j2_template)
         if 'conditions' not in recipe_kwargs:
             recipe_kwargs['conditions'] = []
         if skip_unchanged:
