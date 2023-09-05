@@ -31,9 +31,9 @@ def make_enable_apis_recipe(google_apis, project_id, **recipe_kwargs):
     def enable_google_apis():
         gcloud = sane_utils.get_cmd_from_env("gcloud").bake(project=project_id)
 
-        log.debug(f"Enabling GCP APIs, this may take several minutes...", project_id=project_id)
+        log.info(f"Enabling GCP APIs, this may take several minutes...", project_id=project_id)
         for api in google_apis:
-            log.debug(f"enable API...", api=api)
+            log.info(f"enable API...", api=api)
             gcloud.services.enable(api)
 
 
