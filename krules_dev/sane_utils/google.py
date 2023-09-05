@@ -33,6 +33,8 @@ def make_enable_apis_recipe(google_apis, project_id, **recipe_kwargs):
 
         log.info(f"Enabling GCP APIs, this may take several minutes...", project_id=project_id)
         for api in google_apis:
+            if api.find(".") < 0:
+                api = f"{api}.googleapis.com"
             log.info(f"enable API...", api=api)
             gcloud.services.enable(api)
 
