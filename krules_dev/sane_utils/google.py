@@ -25,6 +25,8 @@ root_dir = os.path.dirname(abs_path)
 
 
 def make_enable_apis_recipe(google_apis, project_id, **recipe_kwargs):
+    if "info" not in recipe_kwargs:
+        recipe_kwargs["info"] = "Enable required Google API"
     @recipe(**recipe_kwargs)
     def enable_google_apis():
         gcloud = sane_utils.get_cmd_from_env("gcloud").bake(project=project_id)
