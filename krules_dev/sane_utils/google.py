@@ -124,7 +124,7 @@ def make_set_gke_contexts_recipe(project_name, targets, **recipe_kwargs):
             cluster_name = sane_utils.get_var_for_target("cluster", target, True)
             namespace = sane_utils.get_var_for_target("namespace", target)
             if namespace is None:
-                namespace = "default"
+                namespace = f"{project_name}-{target}"
 
             location_arg, region_or_zone = get_cluster_location_from_env(target)
 
