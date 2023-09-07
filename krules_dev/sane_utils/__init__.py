@@ -65,8 +65,8 @@ logger.setLevel(logging.DEBUG)
 #     cache_logger_on_first_use=True,
 # )
 
-log_level = int(os.environ.get("SANE_LOG_LEVEL", logging.INFO))
-structlog.configure(wrapper_class=structlog.make_filtering_bound_logger(log_level))
+LOG_LEVEL = int(os.environ.get("SANE_LOG_LEVEL", logging.INFO))
+structlog.configure(wrapper_class=structlog.make_filtering_bound_logger(LOG_LEVEL))
 
 
 from .base import *

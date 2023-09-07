@@ -301,10 +301,10 @@ def make_render_resource_recipes(globs: list,
             )
         )
 
-        from krules_dev.sane_utils import log_level
+        from krules_dev.sane_utils import LOG_LEVEL
 
         # show recipe to render template only if SANE_LOG_LEVEL < 20
-        if log_level < logging.INFO:
+        if LOG_LEVEL < logging.INFO:
             recipe_kwargs['info'] = "Render '{template}'".format(template=j2_template)
         else:
             recipe_kwargs.pop("info", None)
