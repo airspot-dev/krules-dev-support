@@ -301,9 +301,17 @@ def make_render_resource_recipes(globs: list,
             )
         )
 
-        #recipe_kwargs['info'] = "Render '{template}'".format(template=j2_template)
+        from krules_dev.sane_utils import log_level
+
+        # show recipe to render template only if SANE_LOG_LEVEL < 20
+        if log_level < logging.INFO:
+            recipe_kwargs['info'] = "Render '{template}'".format(template=j2_template)
+        else:
+            recipe_kwargs.pop("info", None)
         if 'conditions' not in recipe_kwargs:
             recipe_kwargs['conditions'] = []
+
+        # always render even if template unchanged
         if skip_unchanged:
             recipe_kwargs['conditions'].append(resource_older_than_template)
         recipe_kwargs['name'] = resource_file
@@ -414,13 +422,13 @@ def make_build_recipe(image_name: str = None,
 
 
 
-def make_push_recipe(digest_file: str = ".digest",
+def make_push_recipe(target: str,
+                     digest_file: str = ".digest",
                      out_dir: str = ".build",
                      tag: str = os.environ.get("RELEASE_VERSION"),
                      image_name: str = None,
                      run_before: typing.Sequence[typing.Callable] = (),
                      dependent_build_recipe: str = "build",
-                     target: str = os.environ.get("TARGET", "default"),
                      **recipe_kwargs):
     Path(out_dir).mkdir(parents=True, exist_ok=True)
 
@@ -480,7 +488,7 @@ def make_push_recipe(digest_file: str = ".digest",
             log.info("Pushed", digest=open(of, "r").read())
 
 
-def make_apply_recipe(globs: typing.Iterable[str], run_before: typing.Iterable[typing.Callable] = (), context=None,
+def make_apply_recipe(globs: typing.Iterable[str], run_before: typing.Iterable[typing.Callable] = (),
                       **recipe_kwargs):
 
     if 'name' not in recipe_kwargs:
@@ -500,6 +508,45 @@ def make_apply_recipe(globs: typing.Iterable[str], run_before: typing.Iterable[t
             for file in sorted(k8s_files):
                 log.info(f"Applying {file}..")
                 kubectl.apply("-f", file)
+
+def make_apply_k8s_templates_recipe(
+        target: str,
+        out_dir: str = ".build",
+        templates_dir: str = "k8s",
+        context_vars: dict = None,
+        **recipe_kwargs,
+):
+    if 'name' not in recipe_kwargs:
+        recipe_kwargs['name'] = 'apply_k8s'
+    if 'info' not in recipe_kwargs:
+        recipe_kwargs['info'] = 'Render and apply k8s resources'
+
+    if context_vars is None:
+        context_vars = {}
+    context_vars["target"] = target
+
+    make_render_resource_recipes(
+        globs=[
+            f"{templates_dir}/*.j2"
+        ],
+        context_vars=context_vars,
+        out_dir=f"{out_dir}/{templates_dir}/{target}",
+        hooks=[
+            "prepare_apply"
+        ],
+        **recipe_kwargs,
+    )
+
+    #recipe_kwargs.pop("info")
+    make_apply_recipe(
+        globs=[
+            f"{out_dir}/{templates_dir}/{target}/*.yaml"
+        ],
+        hook_deps=[
+            "prepare_apply"
+        ],
+        **recipe_kwargs,
+    )
 
 
 def make_clean_recipe(globs, on_completed=lambda: None, **recipe_kwargs):
