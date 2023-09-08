@@ -9,6 +9,7 @@ from typing import Callable, NamedTuple, Literal, Tuple
 # from subprocess import run, CalledProcessError
 
 import sh
+import yaml
 from structlog.contextvars import bind_contextvars, clear_contextvars
 
 from krules_dev import sane_utils
@@ -224,15 +225,12 @@ def make_target_deploy_recipe(
         target=target
     )
 
-    use_cloudrun = int(sane_utils.get_var_for_target("USE_CLOUDRUN", target, default="0"))
-    if use_cloudrun:
-        log.debug("using CloudRun to deploy")
-    else:
-        log.debug("using Kubernetes to deploy")
+    project_id = sane_utils.get_var_for_target("project_id", target)
+    app_name = sane_utils.check_env("APP_NAME")
+    project_name = sane_utils.check_env("PROJECT_NAME")
+    namespace = sane_utils.get_var_for_target("namespace", target, default=context_vars.get("namespace", "default"))
 
-    use_cloudbuild = int(sane_utils.get_var_for_target("USE_CLOUDBUILD", target, default="0"))
-    if use_cloudbuild:
-        log.debug("using Google Cloud Build"),
+
 
     if context_vars is None:
         context_vars = {}
@@ -272,7 +270,7 @@ def make_target_deploy_recipe(
 
     sane_utils.make_copy_source_recipe(
         name="prepare_source_files",
-        info="Copy the source files within the designated context to prepare for the container build.",
+        #info="Copy the source files within the designated context to prepare for the container build.",
         location=root_dir,
         src=origins,
         dst="",
@@ -282,7 +280,7 @@ def make_target_deploy_recipe(
 
     sane_utils.make_copy_source_recipe(
         name="prepare_user_baselibs",
-        info="Copy base libraries within the designated context to prepare for the container build.",
+        #info="Copy base libraries within the designated context to prepare for the container build.",
         location=os.path.join(sane_utils.check_env("KRULES_PROJECT_DIR"), "base", "libs"),
         src=baselibs,
         dst=".user-baselibs",
@@ -295,11 +293,11 @@ def make_target_deploy_recipe(
             "Dockerfile.j2"
         ],
         context_vars=lambda: {
-            "app_name": sane_utils.check_env("APP_NAME"),
-            "project_name": sane_utils.check_env("PROJECT_NAME"),
+            "app_name": app_name,
+            "project_name": project_name,
             "image_base": callable(image_base) and image_base() or image_base,
             "user_baselibs": baselibs,
-            "project_id": sane_utils.get_var_for_target("project_id", target, True),
+            "project_id": project_id,
             "target": target,
             "sources": sources_ext,
             **context_vars
@@ -309,53 +307,39 @@ def make_target_deploy_recipe(
         ]
     )
 
-    project_id = sane_utils.get_var_for_target("project_id", target)
-    use_cloudrun = int(sane_utils.get_var_for_target("use_cloudrun", target, default="0"))
-    use_cloudbuild = int(sane_utils.get_var_for_target("use_cloudbuild", target, default="0"))
-    region = sane_utils.get_var_for_target("region", target, default=None)
-    if use_cloudrun and region is None:
-        log.error("You must specify a region if using CloudRun")
-        sys.exit(-1)
-    namespace = sane_utils.get_var_for_target("namespace", target, default="default")
-    kubectl_opts = sane_utils.get_var_for_target("kubectl_opts", target, default=None)
-    if kubectl_opts:
-        kubectl_opts = re.split(" ", kubectl_opts)
-    else:
-        kubectl_opts = []
-
-    sane_utils.make_render_resource_recipes(
-        globs=[
-            "skaffold.yaml.j2"
-        ],
-        context_vars=lambda: {
-            "app_name": sane_utils.check_env("APP_NAME"),
-            # "project_id": sane_utils.get_var_for_target("project_id", target, True),
-            "targets": [{
-                "name": target,
-                "project_id": project_id,
-                "use_cloudrun": use_cloudrun,
-                "use_cloudbuild": use_cloudbuild,
-                "region": region,
-                "namespace": namespace,
-                "kubectl_opts": kubectl_opts,
-            }],
-            **context_vars
-        },
-        hooks=[
-            'prepare_build'
-        ]
-    )
+    # sane_utils.make_render_resource_recipes(
+    #     globs=[
+    #         "skaffold.yaml.j2"
+    #     ],
+    #     context_vars=lambda: {
+    #         "app_name": sane_utils.check_env("APP_NAME"),
+    #         # "project_id": sane_utils.get_var_for_target("project_id", target, True),
+    #         "targets": [{
+    #             "name": target,
+    #             "project_id": project_id,
+    #             "use_cloudrun": use_cloudrun,
+    #             "use_cloudbuild": use_cloudbuild,
+    #             "region": region,
+    #             "namespace": namespace,
+    #             "kubectl_opts": kubectl_opts,
+    #         }],
+    #         **context_vars
+    #     },
+    #     hooks=[
+    #         'prepare_build'
+    #     ]
+    # )
 
     sane_utils.make_render_resource_recipes(
         globs=[
             "k8s/*.j2"
         ],
         context_vars={
-            "project_name": sane_utils.check_env("PROJECT_NAME"),
-            "app_name": sane_utils.check_env("APP_NAME"),
-            "namespace": sane_utils.get_var_for_target("namespace", target, default="default"),
+            "project_name": project_name,
+            "app_name": app_name,
+            "namespace": namespace,
             "target": target,
-            "project_id": sane_utils.get_var_for_target("project_id", target, True),
+            "project_id": project_id,
             **context_vars
         },
         hooks=[
@@ -380,23 +364,118 @@ def make_target_deploy_recipe(
             log.debug("No changes detected... Skip deploy")
             return
 
+        use_cloudrun = int(sane_utils.get_var_for_target("USE_CLOUDRUN", target, default="0"))
+
+        region = sane_utils.get_var_for_target("region", target, default=None)
+        if use_cloudrun:
+            log.debug("using CloudRun to deploy")
+            if region is None:
+                log.error("You must specify a region if using CloudRun")
+                sys.exit(-1)
+        else:
+            log.debug("using Kubernetes to deploy")
+
+        use_cloudbuild = int(sane_utils.get_var_for_target("USE_CLOUDBUILD", target, default="0"))
+        if use_cloudbuild:
+            log.debug("using Google Cloud Build"),
+
+        use_buildkit = int(sane_utils.get_var_for_target("USE_BUILDKIT", target, default="0"))
+        if use_buildkit:
+            log.debug("using BuildKit")
+
+        use_dockercli = int(sane_utils.get_var_for_target("USE_DOCKERCLI", target, default="0"))
+        if use_buildkit:
+            log.debug("using Docker CLI")
+
+        build_platform = sane_utils.get_var_for_target("build_platform", target, default="linux/amd64")
+
+        kubectl_ctx = sane_utils.get_var_for_target("kubectl_ctx", target, default=None)
+        if kubectl_ctx is None and not use_cloudrun:
+            kubectl_ctx = f"gke_{project_name}_{target}"
+            log.debug(f"KUBECTL_CTX not specified for target, using {kubectl_ctx}")
+            try:
+                sane_utils.get_cmd_from_env("kubectl").config("use-context", kubectl_ctx)
+            except sh.ErrorReturnCode:
+                log.error("cannot set kubectl context", context=kubectl_ctx)
+                sys.exit(-1)
+
+        kubectl_opts = sane_utils.get_var_for_target("kubectl_opts", target, default=None)
+        if kubectl_opts:
+            kubectl_opts = re.split(" ", kubectl_opts)
+        else:
+            kubectl_opts = []
+
         repo_name = sane_utils.get_var_for_target("DOCKER_REGISTRY", target)
         log.debug("Get DOCKER_REGISTRY from env", value=repo_name)
         if repo_name is None:
-            artifact_registry = sane_utils.check_env('PROJECT_NAME')
-            region = sane_utils.get_var_for_target('region', target)
-            project = sane_utils.get_var_for_target('project_id', target)
-            repo_name = f"{region}-docker.pkg.dev/{project}/{artifact_registry}"
+            if region is None:
+                region = sane_utils.get_var_for_target("cluster_region", target, True)
+                if region is None:
+                    log.error("you need to provide a REGION where your artifact registry resides, or provide a value for DOCKER_REGISTRY")
+                    sys.exit(-1)
+            artifact_registry = f"{sane_utils.check_env('PROJECT_NAME')}-{target}"
+            repo_name = f"{region}-docker.pkg.dev/{project_id}/{artifact_registry}"
             log.debug("Using project artifact registry", value=repo_name)
+
         with sane_utils.pushd(os.path.join(root_dir, out_dir)):
             skaffold = sh.Command(
                 sane_utils.check_cmd("skaffold")
             )
 
+            skaffold_config = {
+                "apiVersion": "skaffold/v3alpha1",
+                "kind": "Config",
+                "profiles": [{
+                    "name": target,
+                    "manifests": {
+                        "rawYaml": [
+                            f"k8s/{target}/*.yaml"
+                        ]
+                    },
+                    "build": {
+                        "artifacts": [{
+                            "image": app_name,
+                        }]
+                    },
+                    "deploy": {}
+                }]
+            }
+
+            if use_cloudbuild:
+                skaffold_config["profiles"][0]["build"]["googleCloudBuild"] = {
+                    "projectId": project_id
+                }
+            else:
+                skaffold_config["profiles"][0]["build"]["local"] = {
+                    "useDockerCLI": bool(use_dockercli),
+                    "useBuildkit": bool(use_buildkit)
+                }
+
+            if use_cloudrun:
+                skaffold_config["profiles"][0]["deploy"]["cloudrun"] = {
+                    "projectid": project_id,
+                    "region": region,
+                }
+            else:
+                skaffold_config["profiles"][0]["deploy"]["kubectl"] = {
+                    "defaultNamespace": namespace
+                }
+                if len(kubectl_opts):
+                    skaffold_config["profiles"][0]["deploy"]["kubectl"]["flags"] = {
+                        "global": kubectl_opts
+                    }
+
+
             log.debug("Running skaffold")
+            with open("skaffold.yaml", "w") as f:
+                dump = yaml.dump(skaffold_config)
+                log.debug(f"\n{dump}")
+                f.write(dump)
             skaffold.run(
                 default_repo=repo_name,
                 profile=target,
+                platform=build_platform,
+                _fg=True,
             )
             log.info("Deployed")
 

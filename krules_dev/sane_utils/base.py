@@ -670,6 +670,7 @@ def make_copy_source_recipe(location: str,
     src = list(map(lambda x: os.path.join(location, x), src))
     if workdir is None:
         workdir = os.path.abspath(inspect.stack()[1].filename)
+
     @recipe(**recipe_kwargs)
     def _recipe():
         copy_source(
