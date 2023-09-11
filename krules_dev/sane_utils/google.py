@@ -225,6 +225,9 @@ def make_target_deploy_recipe(
         target=target
     )
 
+    if context_vars is None:
+        context_vars = {}
+
     project_id = sane_utils.get_var_for_target("project_id", target)
     app_name = sane_utils.check_env("APP_NAME")
     project_name = sane_utils.check_env("PROJECT_NAME")
@@ -232,8 +235,6 @@ def make_target_deploy_recipe(
 
 
 
-    if context_vars is None:
-        context_vars = {}
     # if extra_target_context_vars is None:
     #    extra_target_context_vars = {}
 
