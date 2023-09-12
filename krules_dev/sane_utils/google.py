@@ -390,21 +390,21 @@ def make_target_deploy_recipe(
 
         build_platform = sane_utils.get_var_for_target("build_platform", target, default="linux/amd64")
 
-        kubectl_ctx = sane_utils.get_var_for_target("kubectl_ctx", target, default=None)
-        if kubectl_ctx is None and not use_cloudrun:
-            kubectl_ctx = f"gke_{project_name}_{target}"
-            log.debug(f"KUBECTL_CTX not specified for target, using {kubectl_ctx}")
-            try:
-                sane_utils.get_cmd_from_env("kubectl").config("use-context", kubectl_ctx)
-            except sh.ErrorReturnCode:
-                log.error("cannot set kubectl context", context=kubectl_ctx)
-                sys.exit(-1)
-
         kubectl_opts = sane_utils.get_var_for_target("kubectl_opts", target, default=None)
         if kubectl_opts:
             kubectl_opts = re.split(" ", kubectl_opts)
         else:
             kubectl_opts = []
+
+        kubectl_ctx = sane_utils.get_var_for_target("kubectl_ctx", target, default=None)
+        if kubectl_ctx is None and not use_cloudrun:
+            kubectl_ctx = f"gke_{project_name}_{target}"
+            log.debug(f"KUBECTL_CTX not specified for target, using {kubectl_ctx}")
+        # try:
+        #     sane_utils.get_cmd_from_env("kubectl").config("use-context", kubectl_ctx, _fg=True)
+        # except sh.ErrorReturnCode:
+        #     log.error("cannot set kubectl context", context=kubectl_ctx)
+        #     sys.exit(-1)
 
         repo_name = sane_utils.get_var_for_target("DOCKER_REGISTRY", target)
         log.debug("Get DOCKER_REGISTRY from env", value=repo_name)
@@ -458,6 +458,7 @@ def make_target_deploy_recipe(
                     "region": region,
                 }
             else:
+                skaffold_config["profiles"][0]["deploy"]["kubeContext"] = kubectl_ctx
                 skaffold_config["profiles"][0]["deploy"]["kubectl"] = {
                     "defaultNamespace": namespace
                 }
@@ -465,7 +466,6 @@ def make_target_deploy_recipe(
                     skaffold_config["profiles"][0]["deploy"]["kubectl"]["flags"] = {
                         "global": kubectl_opts
                     }
-
 
             log.debug("Running skaffold")
             with open("skaffold.yaml", "w") as f:

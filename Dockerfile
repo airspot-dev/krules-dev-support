@@ -37,4 +37,4 @@ RUN git config --system credential.'https://source.developers.google.com'.helper
 
 VOLUME ["/root/.config"]
 
-RUN pip3 install --upgrade pip && pip3 install krules-dev-support==0.12.9
+RUN pip3 install --upgrade pip && pip3 install krules-dev-support==0.12.14
