@@ -122,7 +122,7 @@ def check_env(name, err_code=-1):
     if name not in os.environ:
         log.error(f'Environment variable does not exists', name=name)
         sys.exit(err_code)
-    return os.environ[name]
+    return os.environ[name].strip()
 
 
 def check_cmd(cmd: str, err_code=-1):
