@@ -59,7 +59,7 @@ def get_cluster_location_from_env(target: str) -> Tuple[Literal['zone', 'region'
 def make_check_gcloud_config_recipe(project_id, region, zone, **recipe_kwargs):
     @recipe(info="Check current gcloud configuration", **recipe_kwargs)
     def check_gcloud_config():
-        gcloud = sane_utils.get_cmd_from_env("gcloud").bake(project=project_id)
+        gcloud = sane_utils.get_cmd_from_env("gcloud")
 
         log.debug("Checking gcloud configuration", project_id=project_id, region=region, zone=zone)
 
@@ -76,6 +76,7 @@ def make_check_gcloud_config_recipe(project_id, region, zone, **recipe_kwargs):
         # PROJECT
         action = "read"
         _project_id = _get_prop_cmd("core/project")
+
         if _project_id == '':
             _project_id = project_id
             _set_prop_cmd("core/project", project_id)
