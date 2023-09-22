@@ -119,6 +119,7 @@ def load_env():
         _load_dir_env(p)
 
 def check_env(name, err_code=-1):
+    name = name.upper()
     if name not in os.environ:
         log.error(f'Environment variable does not exists', name=name)
         sys.exit(err_code)
@@ -682,7 +683,9 @@ def make_copy_source_recipe(location: str,
         )
 
 
-def get_var_for_target(name: str, target: str, mandatory: bool = False, default=None) -> str | None:
+def get_var_for_target(name: str, target: str = None, mandatory: bool = False, default=None) -> str | None:
+    if target is None:
+        target, _ = get_targets_info()
     name = name.upper()
     target = target.upper()
     var_name = f"{target}_{name}"

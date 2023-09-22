@@ -1,9 +1,9 @@
 import logging
 import os
+import sys
 
 import structlog
-import sys
-from sane import recipe as base_recipe
+
 
 class CustomFormatter(logging.Formatter):
     grey = "\x1b[38;20m"
@@ -70,4 +70,6 @@ structlog.configure(wrapper_class=structlog.make_filtering_bound_logger(LOG_LEVE
 
 
 from .base import *
+from .pulumi import *
+
 

@@ -13,7 +13,7 @@ import yaml
 from structlog.contextvars import bind_contextvars, clear_contextvars
 
 from krules_dev import sane_utils
-from .base import recipe
+from krules_dev.sane_utils.base import recipe
 
 # logger = logging.getLogger("__sane__")
 
@@ -25,9 +25,14 @@ abs_path = os.path.abspath(inspect.stack()[-1].filename)
 root_dir = os.path.dirname(abs_path)
 
 
-def make_enable_apis_recipe(google_apis, project_id, **recipe_kwargs):
+def make_enable_apis_recipe(google_apis, project_id=None, **recipe_kwargs):
     if "info" not in recipe_kwargs:
         recipe_kwargs["info"] = "Enable required Google API"
+
+    if project_id is None:
+        target, _ = sane_utils.get_targets_info()
+        project_id = sane_utils.get_var_for_target("project_id", target, True)
+
     @recipe(**recipe_kwargs)
     def enable_google_apis():
         gcloud = sane_utils.get_cmd_from_env("gcloud").bake(project=project_id)
@@ -112,53 +117,58 @@ def make_check_gcloud_config_recipe(project_id, region, zone, **recipe_kwargs):
             log.info(f"OK", zone=_zone, action=action)
 
 
-def make_set_gke_contexts_recipe(project_name, targets, **recipe_kwargs):
+def make_set_gke_context_recipe(project_name=None, target=None, activate=True, **recipe_kwargs):
+
+    if project_name is None:
+        project_name = sane_utils.check_env("PROJECT_NAME")
+
+    if target is None:
+        target, _ = sane_utils.get_targets_info()
     @recipe(
         info="Set gke kubectl config contexts",
         **recipe_kwargs
     )
-    def set_gke_contexts():
-        for idx, target in enumerate(targets):
-            context_name = f"gke_{project_name}_{target.lower()}"
-            project = sane_utils.get_var_for_target("cluster_project_id", target, False)
-            if not project:
-                project = sane_utils.get_var_for_target("project_id", target, True)
-            cluster_name = sane_utils.get_var_for_target("cluster", target, True)
-            namespace = sane_utils.get_var_for_target("namespace", target)
-            if namespace is None:
-                namespace = f"{project_name}-{target}"
+    def set_gke_context():
+        context_name = f"gke_{project_name}_{target.lower()}"
+        project = sane_utils.get_var_for_target("cluster_project_id", target, False)
+        if not project:
+            project = sane_utils.get_var_for_target("project_id", target, True)
+        cluster_name = sane_utils.get_var_for_target("cluster", target, True)
+        namespace = sane_utils.get_var_for_target("namespace", target)
+        if namespace is None:
+            namespace = f"{project_name}-{target}"
 
-            location_arg, region_or_zone = get_cluster_location_from_env(target)
+        location_arg, region_or_zone = get_cluster_location_from_env(target)
 
-            if not region_or_zone:
-                log.error("Cluster location unknown, specify region or zone", target=target,
-                          cluster=cluster_name, project=project)
-                sys.exit(-1)
-            log.info(
-                f"Setting context for cluster",
-                context_name=context_name, region_or_zone=region_or_zone, cluster=cluster_name, project=project,
-                namespace=namespace
-            )
+        if not region_or_zone:
+            log.error("Cluster location unknown, specify region or zone", target=target,
+                      cluster=cluster_name, project=project)
+            sys.exit(-1)
+        log.info(
+            f"Setting context for cluster",
+            context_name=context_name, region_or_zone=region_or_zone, cluster=cluster_name, project=project,
+            namespace=namespace
+        )
 
-            gcloud = sane_utils.get_cmd_from_env("gcloud").bake("--project", project)
-            kubectl = sane_utils.get_cmd_from_env("kubectl", opts=False)
+        gcloud = sane_utils.get_cmd_from_env("gcloud").bake("--project", project)
+        kubectl = sane_utils.get_cmd_from_env("kubectl", opts=False)
 
-            gcloud.container.clusters("get-credentials", cluster_name, f"--{location_arg}", region_or_zone, _fg=True)
+        gcloud.container.clusters("get-credentials", cluster_name, f"--{location_arg}", region_or_zone, _fg=True)
 
-            try:
-                kubectl.config("delete-context", context_name)
-            except sh.ErrorReturnCode:
-                pass
+        try:
+            kubectl.config("delete-context", context_name)
+        except sh.ErrorReturnCode:
+            pass
 
-            kubectl.config("rename-context", f"gke_{project}_{region_or_zone}_{cluster_name}", context_name)
-            kubectl.config("set-context", context_name, "--namespace", namespace)
+        kubectl.config("rename-context", f"gke_{project}_{region_or_zone}_{cluster_name}", context_name)
+        kubectl.config("set-context", context_name, "--namespace", namespace)
 
-            kubectl_opts = sane_utils.get_var_for_target("kubectl_opts", target)
-            if kubectl_opts is None:
-                os.environ[f"{target.upper()}_KUBECTL_OPTS"] = f"--context={context_name}"
+        kubectl_opts = sane_utils.get_var_for_target("kubectl_opts", target)
+        if kubectl_opts is None:
+            os.environ[f"{target.upper()}_KUBECTL_OPTS"] = f"--context={context_name}"
 
-            if idx == 0:
-                kubectl.config("use-context", context_name)
+        if activate:
+            kubectl.config("use-context", context_name)
 
 
 def make_ensure_billing_enabled(project_id, **recipe_kwargs):
@@ -488,20 +498,21 @@ def make_ensure_gcs_bucket_recipe(bucket_name, project_id, location="EU", **reci
         gsutil = sh.Command(
             sane_utils.check_cmd(os.environ.get("GSUTIL_CMD", "gsutil"))
         )
+        _bucket_name = bucket_name
+        if not _bucket_name.startswith("gs://"):
+            _bucket_name = f"gs://{_bucket_name}"
         bind_contextvars(
-            bucket=bucket_name, project=project_id, location=location
+            bucket=_bucket_name, project=project_id, location=location
         )
         log.debug(f"Try to create gcs bucket", )
         # out = io.StringIO()
         # logging.getLogger('sh').setLevel(logging.DEBUG)
         # def _custom_log(ran, call_args, pid=None):
         #    log.debug("_>", ran=ran, pid=pid)
-
         try:
             gsutil.mb(
-                "-l", location, "-p", project_id, f"gs://{bucket_name}",
+                "-l", location, "-p", project_id, _bucket_name,
                 # _log_msg=_custom_log
-                # _out=out, _err=out
             )
             log.info("gcs bucket created")
         except Exception as ex:
