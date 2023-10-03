@@ -9,15 +9,19 @@ from sane import recipe
 
 from krules_dev import sane_utils
 from krules_dev.sane_utils.google import log
+from .google import *
 
 
 def make_pulumi_stack_recipes(stack_name, project_name=None, target=None, program: typing.Callable = None,
-                              configs: dict[str, str] = None):
+                              configs: dict[str, str] = None, up_deps=None):
     if target is None:
         target, _ = sane_utils.get_targets_info()
 
     if project_name is None:
         project_name = sane_utils.check_env("project_name")
+
+    if up_deps is None:
+        up_deps = []
 
     def _get_stack():
         nonlocal target, project_name, program, stack_name
@@ -42,7 +46,8 @@ def make_pulumi_stack_recipes(stack_name, project_name=None, target=None, progra
 
     @recipe(
         name="pulumi_up",
-        info=f"Create or update stack for target {target}"
+        info=f"Create or update stack for target {target}",
+        recipe_deps=up_deps
     )
     def make_pulumi_up_recipe():
         nonlocal program

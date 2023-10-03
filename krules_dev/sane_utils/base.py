@@ -9,6 +9,7 @@ import shutil
 import typing
 from glob import glob
 from pathlib import Path
+from typing import Callable
 
 from dotenv import load_dotenv
 from sane import recipe as base_recipe
@@ -16,6 +17,11 @@ from sane import _Help as Help
 import sh
 
 import logging
+
+from krules_dev import sane_utils
+
+# from krules_dev.sane_utils import root_dir
+# from krules_dev.sane_utils.google import root_dir
 
 # from krules_dev.sane_utils.deprecated import _run
 
@@ -37,7 +43,8 @@ def recipe(*args, name=None, hooks=[], recipe_deps=[],
     """
     Wraps sane_utils recipe to always have a name
     """
-    #frame = inspect.stack(context=3)[-1]
+
+    # frame = inspect.stack(context=3)[-1]
 
     # `frame` is disposed of once used
 
@@ -51,9 +58,8 @@ def recipe(*args, name=None, hooks=[], recipe_deps=[],
     #         self._fn(*args, **kwargs)
     #         print("after")
 
-
     def recipe_fn(fn):
-        #import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
         nonlocal name
         if name is None:
             name = fn.__name__
@@ -70,7 +76,6 @@ def recipe(*args, name=None, hooks=[], recipe_deps=[],
         # r_func(fn)
         return fn
 
-
     def wrap(fn):
         def __wrapped__():
             bind_contextvars(
@@ -79,15 +84,13 @@ def recipe(*args, name=None, hooks=[], recipe_deps=[],
             fn()
             unbind_contextvars("recipe")
 
-        __wrapped__.__name__=fn.__name__
+        __wrapped__.__name__ = fn.__name__
         return __wrapped__
-
-
 
     return recipe_fn
 
-def load_env():
 
+def load_env():
     def _load_dir_env(_dir):
         for f in ("env.project", ".env", "env", ".env.local", "env.local"):
             p = os.path.join(_dir, f)
@@ -99,7 +102,6 @@ def load_env():
             if os.path.exists(p):
                 log.debug("Overriding environment", file=p)
                 load_dotenv(p, override=True)
-
 
     # look for a project file
     p = Path(root_dir)
@@ -117,6 +119,7 @@ def load_env():
 
     for p in traversed_p:
         _load_dir_env(p)
+
 
 def check_env(name, err_code=-1):
     name = name.upper()
@@ -190,7 +193,7 @@ def get_buildable_image(location: str,
         return f'{docker_registry}/{name}:{os.environ["RELEASE_VERSION"]}'
     build_dir = os.path.join(location, dir_name)
     log.debug("Checking digest file", out_dir=out_dir, digest_file=digest_file, dir_name=dir_name)
-    #log.debug(f"Ensuring {os.path.join(out_dir, digest_file)} in {dir_name}")
+    # log.debug(f"Ensuring {os.path.join(out_dir, digest_file)} in {dir_name}")
     make = sh.Command(
         check_cmd("python"),
     ).bake(os.path.join(build_dir, "make.py"))
@@ -254,7 +257,6 @@ def get_project_base(location):
 def update_code_hash(globs: list,
                      out_dir: str = ".build",
                      output_file: str = ".code.digest"):
-
     def _update_hash_within_dir(dir_path):
         for filename in os.listdir(dir_path):
             f = os.path.join(dir_path, filename)
@@ -285,7 +287,6 @@ def make_render_resource_recipes(globs: list,
                                  run_before: typing.Sequence[typing.Callable] = (),
                                  skip_unchanged=False,
                                  **recipe_kwargs):
-
     def _context_vars():
         nonlocal context_vars
         if callable(context_vars):
@@ -352,7 +353,6 @@ def make_build_recipe(image_name: str = None,
                       build_args: dict = {},
                       target: str = os.environ.get("TARGET", "default"),
                       **recipe_kwargs):
-
     Path(out_dir).mkdir(parents=True, exist_ok=True)
 
     if image_name is None:
@@ -386,18 +386,19 @@ def make_build_recipe(image_name: str = None,
             func()
 
         with pushd(root_dir):
-            #_build_args = " ".join([f"--build-arg {v[0]}={v[1]}" for v in build_args.items()])
+            # _build_args = " ".join([f"--build-arg {v[0]}={v[1]}" for v in build_args.items()])
 
-            build_platform=get_var_for_target("BUILD_PLATFORM", target=target, default="amd64")
+            build_platform = get_var_for_target("BUILD_PLATFORM", target=target, default="amd64")
 
-            docker=sh.Command(docker_cmd)
+            docker = sh.Command(docker_cmd)
 
             try:
                 try:
                     docker.build(
                         "--platform", build_platform,
                         "-t", target_image, "-f", os.path.join(out_dir, dockerfile),
-                        *[item for row in [("--build-arg", f"{v[0]}={v[1]}") for v in build_args.items()] for item in row],
+                        *[item for row in [("--build-arg", f"{v[0]}={v[1]}") for v in build_args.items()] for item in
+                          row],
                         ".",
                         _tee='err',
                     )
@@ -419,8 +420,6 @@ def make_build_recipe(image_name: str = None,
                     os.unlink(success_file)
                 log.error(f"Unable to build image", target_image=target_image)
                 raise ex
-
-
 
 
 def make_push_recipe(target: str,
@@ -491,7 +490,6 @@ def make_push_recipe(target: str,
 
 def make_apply_recipe(globs: typing.Iterable[str], run_before: typing.Iterable[typing.Callable] = (),
                       **recipe_kwargs):
-
     if 'name' not in recipe_kwargs:
         recipe_kwargs['name'] = 'apply'
     if 'info' not in recipe_kwargs:
@@ -509,6 +507,7 @@ def make_apply_recipe(globs: typing.Iterable[str], run_before: typing.Iterable[t
             for file in sorted(k8s_files):
                 log.info(f"Applying {file}..")
                 kubectl.apply("-f", file)
+
 
 def make_apply_k8s_templates_recipe(
         target: str,
@@ -538,7 +537,7 @@ def make_apply_k8s_templates_recipe(
         **recipe_kwargs,
     )
 
-    #recipe_kwargs.pop("info")
+    # recipe_kwargs.pop("info")
     make_apply_recipe(
         globs=[
             f"{out_dir}/{templates_dir}/{target}/*.yaml"
@@ -551,7 +550,6 @@ def make_apply_k8s_templates_recipe(
 
 
 def make_clean_recipe(globs, on_completed=lambda: None, **recipe_kwargs):
-
     if 'info' not in recipe_kwargs:
         recipe_kwargs['info'] = "Clean up project"
 
@@ -583,10 +581,9 @@ def pushd(new_dir):
 
 def copy_resources(src: typing.Iterable[str], dst: str,
                    override: bool = True,
-                   #make_recipes_before: typing.Iterable = (),
+                   # make_recipes_before: typing.Iterable = (),
                    make_recipes_hooks: typing.Iterable = (),
                    workdir: str = None):
-
     # for recipe in make_recipes_before:
     #     for f in src:
     #         fname=os.path.basename(f)
@@ -613,10 +610,10 @@ def copy_resources(src: typing.Iterable[str], dst: str,
             if os.path.exists(to_path):
                 if override:
                     if os.path.isdir(to_path):
-                        #log.debug("Removing...", directory=to_path, override=override)
+                        # log.debug("Removing...", directory=to_path, override=override)
                         shutil.rmtree(to_path)
                     else:
-                        #log.debug("Removing...", file=to_path, override=override)
+                        # log.debug("Removing...", file=to_path, override=override)
                         os.unlink(to_path)
                 else:
                     log.error(f"Destination path already exists", path=to_path)
@@ -634,10 +631,11 @@ def copy_resources(src: typing.Iterable[str], dst: str,
                     make = sh.Command("python").bake(make_py)
                     make(recipe)
 
+
 def copy_source(src: typing.Union[typing.Iterable[str], str],
                 dst: str,
                 override: bool = True,
-                #make_recipes: typing.Iterable = ("clean", "setup.py"),
+                # make_recipes: typing.Iterable = ("clean", "setup.py"),
                 workdir: str = None):
     """
     It assumes paths relative to KRULES_REPO_DIR
@@ -655,7 +653,7 @@ def copy_source(src: typing.Union[typing.Iterable[str], str],
     if workdir is None:
         workdir = os.path.abspath(inspect.stack()[1].filename)
     copy_resources(
-        src, dst, override, #make_recipes_before=(), make_recipes_after=make_recipes,
+        src, dst, override,  # make_recipes_before=(), make_recipes_after=make_recipes,
         workdir=workdir,
     )
 
@@ -665,7 +663,7 @@ def make_copy_source_recipe(location: str,
                             dst: str,
                             out_dir: str = ".build",
                             override: bool = True,
-                            #make_recipes: typing.Iterable = ("clean", "setup.py"),
+                            # make_recipes: typing.Iterable = ("clean", "setup.py"),
                             workdir: str = None,
                             **recipe_kwargs):
     src = list(map(lambda x: os.path.join(location, x), src))
@@ -678,7 +676,7 @@ def make_copy_source_recipe(location: str,
             src=src,
             dst=os.path.join(out_dir, dst),
             override=override,
-            #make_recipes=make_recipes,
+            # make_recipes=make_recipes,
             workdir=workdir,
         )
 
@@ -727,7 +725,6 @@ def get_target_dicts(targets: typing.Iterable, keys: typing.Iterable[str | list 
 
 
 def make_run_terraform_recipe(manifests_dir="terraform", init_params=(), **recipe_kwargs):
-
     @recipe(info="Apply terraform manifests", **recipe_kwargs)
     def run_terraform():
         terraform = get_cmd_from_env("terraform")
@@ -736,3 +733,98 @@ def make_run_terraform_recipe(manifests_dir="terraform", init_params=(), **recip
             terraform.init("--upgrade", *init_params, _fg=True)
             terraform.plan("-out=terraform.tfplan", _fg=True)
             terraform.apply("-auto-approve", "terraform.tfplan", _fg=True)
+
+
+def make_prepare_build_context_recipes(
+        image_base: str | Callable,
+        target: str = None,
+        baselibs: list | tuple = (),
+        sources: list | tuple = (),
+        out_dir: str = ".build",
+        context_vars: dict = None,
+        **recipe_kwargs,
+
+):
+    target, _ = sane_utils.get_targets_info()
+
+    bind_contextvars(
+        target=target
+    )
+
+    if context_vars is None:
+        context_vars = {}
+
+    project_id = sane_utils.get_var_for_target("project_id", target)
+    app_name = sane_utils.check_env("APP_NAME")
+    project_name = sane_utils.check_env("PROJECT_NAME")
+
+    sources_ext = []
+    origins = []
+    for source in sources:
+        if isinstance(source, str):
+            sources_ext.append(
+                {
+                    "origin": source,
+                    "destination": f"/app/{source}"
+                }
+            )
+            origins.append(source)
+        else:
+            sources_ext.append(
+                {
+                    "origin": source[0],
+                    "destination": source[1]
+                }
+            )
+            origins.append(source[0])
+
+    sane_utils.make_copy_source_recipe(
+        name="prepare_source_files",
+        # info="Copy the source files within the designated context to prepare for the container build.",
+        location=root_dir,
+        src=origins,
+        dst="",
+        out_dir=os.path.join(root_dir, out_dir),
+        hooks=["prepare_context"],
+    )
+
+    sane_utils.make_copy_source_recipe(
+        name="prepare_user_baselibs",
+        # info="Copy base libraries within the designated context to prepare for the container build.",
+        location=os.path.join(sane_utils.check_env("KRULES_PROJECT_DIR"), "base", "libs"),
+        src=baselibs,
+        dst=".user-baselibs",
+        out_dir=os.path.join(root_dir, out_dir),
+        hooks=["prepare_context"],
+    )
+
+    sane_utils.make_render_resource_recipes(
+        globs=[
+            "Dockerfile.j2"
+        ],
+        context_vars=lambda: {
+            "app_name": app_name,
+            "project_name": project_name,
+            "image_base": callable(image_base) and image_base() or image_base,
+            "user_baselibs": baselibs,
+            "project_id": project_id,
+            "target": target,
+            "sources": sources_ext,
+            **context_vars
+        },
+        hook_deps=[
+            'prepare_context'
+        ],
+        **recipe_kwargs,
+    )
+
+
+def get_kubectl_ctx(fmt="{project_name}-{target}", project_name=None, target=None):
+    if project_name is None:
+        project_name = sane_utils.check_env("PROJECT_NAME")
+
+    if target is None:
+        target, _ = sane_utils.get_targets_info()
+
+    return get_var_for_target("kubectl_ctx",
+                              default=fmt.format(project_name=project_name.lower(), target=target.lower()))

@@ -10,7 +10,6 @@ log = structlog.get_logger()
 
 def make_init_pulumi_gcs_recipes(project_id=None, project_name=None, bucket_name=None, bucket_location=None, **recipe_kwargs):
     from krules_dev import sane_utils
-    pulumi = sane_utils.get_cmd_from_env("pulumi")
 
     if project_id is None:
         target, _ = sane_utils.get_targets_info()
@@ -41,5 +40,5 @@ def make_init_pulumi_gcs_recipes(project_id=None, project_name=None, bucket_name
         **recipe_kwargs
     )
     def pulumi_gcs_login_recipe():
-        pulumi.login(bucket_name, _fg=True)
+        sane_utils.get_cmd_from_env("pulumi").login(bucket_name, _fg=True)
 

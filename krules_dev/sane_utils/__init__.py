@@ -71,5 +71,5 @@ structlog.configure(wrapper_class=structlog.make_filtering_bound_logger(LOG_LEVE
 
 from .base import *
 from .pulumi import *
-
+from .google import *
 

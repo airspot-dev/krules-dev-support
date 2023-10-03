@@ -1,12 +1,11 @@
 import inspect
 import json
-import logging
 import os
 import sys
 import re
-from typing import Callable, NamedTuple, Literal, Tuple
+from typing import Callable, Literal, Tuple
 
-# from subprocess import run, CalledProcessError
+from google.cloud import secretmanager
 
 import sh
 import yaml
@@ -117,26 +116,27 @@ def make_check_gcloud_config_recipe(project_id, region, zone, **recipe_kwargs):
             log.info(f"OK", zone=_zone, action=action)
 
 
-def make_set_gke_context_recipe(project_name=None, target=None, activate=True, **recipe_kwargs):
-
+def make_set_gke_context_recipe(fmt="{project_name}_{target}", ns_fmt="{project_name}-{target}", project_name=None,
+                                target=None, activate=True, **recipe_kwargs):
     if project_name is None:
         project_name = sane_utils.check_env("PROJECT_NAME")
 
     if target is None:
         target, _ = sane_utils.get_targets_info()
+
     @recipe(
         info="Set gke kubectl config contexts",
         **recipe_kwargs
     )
     def set_gke_context():
-        context_name = f"gke_{project_name}_{target.lower()}"
+        context_name = fmt.format(project_name=project_name.lower(), target=target.lower())
         project = sane_utils.get_var_for_target("cluster_project_id", target, False)
         if not project:
             project = sane_utils.get_var_for_target("project_id", target, True)
         cluster_name = sane_utils.get_var_for_target("cluster", target, True)
         namespace = sane_utils.get_var_for_target("namespace", target)
         if namespace is None:
-            namespace = f"{project_name}-{target}"
+            namespace = ns_fmt.format(project_name=project_name.lower(), target=target.lower())
 
         location_arg, region_or_zone = get_cluster_location_from_env(target)
 
@@ -244,8 +244,6 @@ def make_target_deploy_recipe(
     project_name = sane_utils.check_env("PROJECT_NAME")
     namespace = sane_utils.get_var_for_target("namespace", target, default=context_vars.get("namespace", "default"))
 
-
-
     # if extra_target_context_vars is None:
     #    extra_target_context_vars = {}
 
@@ -282,7 +280,7 @@ def make_target_deploy_recipe(
 
     sane_utils.make_copy_source_recipe(
         name="prepare_source_files",
-        #info="Copy the source files within the designated context to prepare for the container build.",
+        # info="Copy the source files within the designated context to prepare for the container build.",
         location=root_dir,
         src=origins,
         dst="",
@@ -292,7 +290,7 @@ def make_target_deploy_recipe(
 
     sane_utils.make_copy_source_recipe(
         name="prepare_user_baselibs",
-        #info="Copy base libraries within the designated context to prepare for the container build.",
+        # info="Copy base libraries within the designated context to prepare for the container build.",
         location=os.path.join(sane_utils.check_env("KRULES_PROJECT_DIR"), "base", "libs"),
         src=baselibs,
         dst=".user-baselibs",
@@ -423,7 +421,8 @@ def make_target_deploy_recipe(
             if region is None:
                 region = sane_utils.get_var_for_target("cluster_region", target, True)
                 if region is None:
-                    log.error("you need to provide a REGION where your artifact registry resides, or provide a value for DOCKER_REGISTRY")
+                    log.error(
+                        "you need to provide a REGION where your artifact registry resides, or provide a value for DOCKER_REGISTRY")
                     sys.exit(-1)
             artifact_registry = f"{sane_utils.check_env('PROJECT_NAME')}-{target}"
             repo_name = f"{region}-docker.pkg.dev/{project_id}/{artifact_registry}"
@@ -527,3 +526,28 @@ def make_ensure_gcs_bucket_recipe(bucket_name, project_id, location="EU", **reci
         # )
         # if ret_code == 1:
         #     log.debug("the bucket has not been created (maybe it already exists)", retcode=ret_code)
+
+
+def get_google_secret(base_name, version=None, fmt="{project_name}-{base_name}-{target}", project_id=None, project_name=None, target=None) -> bytes:
+    if project_id is None:
+        project_id = sane_utils.get_var_for_target("project_id")
+    if project_name is None:
+        project_name = sane_utils.check_env("project_name")
+    if target is None:
+        target, _ = sane_utils.get_targets_info()
+
+    name = fmt.format(
+        project_name=project_name.lower(),
+        base_name=base_name,
+        target=target.lower(),
+    )
+
+    if version is None:
+        version = os.environ.get(f"{base_name.upper()}_SECRET_VERSION", "1")
+
+    client = secretmanager.SecretManagerServiceClient()
+    full_name = client.secret_version_path(project_id, name, version)
+    response = client.access_secret_version(name=full_name)
+    return response.payload.data
+
+
