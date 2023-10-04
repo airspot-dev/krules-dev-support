@@ -543,7 +543,7 @@ def get_google_secret(base_name, version=None, fmt="{project_name}-{base_name}-{
     )
 
     if version is None:
-        version = os.environ.get(f"{base_name.upper()}_SECRET_VERSION", "1")
+        version = os.environ.get(f"{base_name.replace('-', '_').upper()}_SECRET_VERSION", "latest")
 
     client = secretmanager.SecretManagerServiceClient()
     full_name = client.secret_version_path(project_id, name, version)
