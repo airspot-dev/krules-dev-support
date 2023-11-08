@@ -25,9 +25,9 @@ from krules_dev import sane_utils
 
 # from krules_dev.sane_utils.deprecated import _run
 
-logger = logging.getLogger("__sane__")
-logger.setLevel(int(os.environ.get("SANE_LOG_LEVEL", logging.INFO)))
-logger.handlers[0].setLevel(int(os.environ.get("SANE_LOG_LEVEL", logging.INFO)))
+# logger = logging.getLogger("__sane__")
+# logger.setLevel(int(os.environ.get("SANE_LOG_LEVEL", logging.INFO)))
+# logger.handlers[0].setLevel(int(os.environ.get("SANE_LOG_LEVEL", logging.INFO)))
 
 import structlog
 from structlog.contextvars import bind_contextvars, unbind_contextvars
@@ -230,7 +230,7 @@ def get_image(image, environ_override: typing.Optional[str] = None):
         )
     if environ_override is not None and environ_override in os.environ:
         return os.environ[environ_override]
-    logger.error("One of RELEASE_VERSION or KRULES_REPO_DIR needed")
+    #logger.error("One of RELEASE_VERSION or KRULES_REPO_DIR needed")
 
 
 def get_project_base(location):
@@ -242,10 +242,10 @@ def get_project_base(location):
     :return image digest
     """
     if "KRULES_PROJECT_DIR" not in os.environ:
-        logger.error("Cannot guess project root directory")
+        log.error("Cannot guess project root directory")
     target_dir = os.path.join(os.environ["KRULES_PROJECT_DIR"], location)
     if not os.path.exists(target_dir) or not os.path.isdir(target_dir):
-        logger.error(f"{target_dir} does not exists or is not a directory")
+        log.error(f"{target_dir} does not exists or is not a directory")
     return get_buildable_image(
         location=os.environ["KRULES_PROJECT_DIR"],
         dir_name=location,

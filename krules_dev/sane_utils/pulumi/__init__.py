@@ -1,27 +1,21 @@
 import importlib
-import json
 import os
-import re
 import typing
 
-from pulumi import automation as auto
-from sane import recipe
+from pulumi import automation as auto, StackReference
 
-from krules_dev import sane_utils
 from krules_dev.sane_utils.google import log
 from .google import *
+from krules_dev.sane_utils.stdvars import inject
 
 
-def make_pulumi_stack_recipes(stack_name, project_name=None, target=None, program: typing.Callable = None,
+@inject
+def make_pulumi_stack_recipes(base_stack_name, project_name=None, target=None, program: typing.Callable = None,
                               configs: dict[str, str] = None, up_deps=None):
-    if target is None:
-        target, _ = sane_utils.get_targets_info()
-
-    if project_name is None:
-        project_name = sane_utils.check_env("project_name")
-
     if up_deps is None:
         up_deps = []
+
+    stack_name = f"{base_stack_name}-{target}"
 
     def _get_stack():
         nonlocal target, project_name, program, stack_name
@@ -83,3 +77,40 @@ def make_pulumi_stack_recipes(stack_name, project_name=None, target=None, progra
         _ = stack.destroy(on_output=log.debug)
 
         log.info("Stack destroyed")
+
+
+# class OutputProxy:
+#
+#     def __init__(self, resource, *props):
+#
+#         if isinstance(resource, dict):
+#             self._dd_props = [resource.get(p) for p in props]
+#         elif isinstance(resource, str):
+#             self._str = resource
+#         elif isinstance(resource, pulumi.Resource):
+#             self._output = pulumi.Output.all(
+#                 *[getattr(resource, p) for p in props]
+#             )
+#         else:
+#             raise Exception(f"UNSUPPORTED TYPE: {type(resource)}")
+#
+#     def apply(self, fn: typing.Callable):
+#         if hasattr(self, "_dd_props"):
+#             return fn(self._dd_props)
+#         elif hasattr(self, "_str"):
+#             return fn(self._str)
+#         elif hasattr(self, "_output"):
+#             return self._output.apply(fn)
+#         else:
+#             raise Exception("CANNOT APPLY")
+@inject
+def get_stack_reference(
+    base_stack_name: str,
+    project_name: str = None,
+    target: str = None,
+    organization = os.environ.get("PULUMI_ORGANIZATION", "organization")
+) -> StackReference:
+
+    return StackReference(
+        f"{organization}/{project_name}/{base_stack_name}-{target}"
+    )

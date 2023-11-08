@@ -1,0 +1,1 @@
+PUBSUB_PULL_CE_SUBSCRIBER_IMAGE="eu.gcr.io/airspot/pubsub-pull-ce-subscriber@sha256:82c0d597c01ae24fd69bfb50c81cf3408fec9ad8fc77c5bb4f99b5360dd6c420"
