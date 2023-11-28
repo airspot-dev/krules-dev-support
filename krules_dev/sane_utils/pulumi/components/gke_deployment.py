@@ -1,15 +1,15 @@
 import hashlib
 import os
 import re
-from typing import List, Mapping, Sequence, Tuple, Any, Iterable
+from typing import List, Mapping, Sequence, Tuple, Any, TypedDict
 
 import pulumi
 import pulumi_gcp as gcp
 import pulumi_kubernetes as kubernetes
 from pulumi import Output
 from pulumi_gcp.artifactregistry import Repository
-from pulumi_kubernetes.core.v1 import ServiceAccount, EnvVarArgs, ServiceSpecType
-from pulumi_google_native.cloudresourcemanager import v1 as gcp_resourcemanager_v1
+from pulumi_kubernetes.core.v1 import ServiceAccount, EnvVarArgs, ServiceSpecType, PersistentVolumeClaimSpecArgs, \
+    ResourceRequirementsArgs
 
 from krules_dev import sane_utils
 from krules_dev.sane_utils import inject
@@ -23,6 +23,8 @@ class GkeDeployment(pulumi.ComponentResource):
     def __init__(self, resource_name: str,
                  target: str = None,
                  project_name: str = None,
+                 project_id: str = None,
+                 cluster_project_id: str = None,
                  namespace: str = None,
                  gcp_repository: Repository | Output[Repository] = None,
                  image_name: str = None,
@@ -35,11 +37,14 @@ class GkeDeployment(pulumi.ComponentResource):
                  subscribe_to: Sequence[Tuple[str, Mapping[str, Any]]] = None,
                  use_firestore: bool = False,
                  secretmanager_project_id: str = None,
+                 deployment_spec_kwargs: dict = None,
                  ce_target_port: int = 8080,
                  ce_target_path: str = "/",
                  service_type: str | ServiceSpecType = None,
                  service_spec_kwargs: dict = None,
                  app_container_kwargs: dict = None,
+                 app_container_pod_spec_kwargs: dict = None,
+                 app_container_pvc_mounts: dict = None,
                  extra_containers: Sequence[kubernetes.core.v1.ContainerArgs] = None,
                  opts: pulumi.ResourceOptions = None) -> None:
 
@@ -85,6 +90,20 @@ class GkeDeployment(pulumi.ComponentResource):
 
             subscriptions[_name] = sub
 
+        env_var_secrets = []
+        google_secrets = []
+        for secret in access_secrets:
+            from_env = sane_utils.get_var_for_target(secret)
+            if from_env is None:
+                google_secrets.append(secret),
+            else:
+                env_var_secrets.append(
+                    EnvVarArgs(
+                        name=secret.upper(),
+                        value=from_env
+                    )
+                )
+
         self.sa = GoogleServiceAccount(
             f"ksa-{resource_name}",
             account_id=account_id,
@@ -92,12 +111,38 @@ class GkeDeployment(pulumi.ComponentResource):
             is_workload_iduser=True,
             ksa=ksa,
             namespace=namespace,
-            access_secrets=access_secrets,
+            access_secrets=google_secrets,
             publish_to=publish_to,
             subscribe_to=subscriptions,
             use_firestore=use_firestore,
             opts=pulumi.ResourceOptions(parent=self),
         )
+
+        # PVC
+        if app_container_pvc_mounts is None:
+            app_container_pvc_mounts = {}
+        for _name, _data in app_container_pvc_mounts.items():
+            kubernetes.core.v1.PersistentVolumeClaim(
+                f"{_name}-pvc",
+                metadata=kubernetes.meta.v1.ObjectMetaArgs(
+                    name=_name,
+                    namespace=namespace,
+                    labels=dict(
+                        project_name=project_name,
+                        target=target,
+                        resource=resource_name
+                    )
+                ),
+                spec=PersistentVolumeClaimSpecArgs(
+                    access_modes=_data.get("access_modes", ["ReadWriteOnce"]),
+                    storage_class_name=_data.get("storage_class_name", "standard-rwo"),
+                    resources=ResourceRequirementsArgs(
+                        requests=_data.get("requests", {
+                            "storage": _data.get("storage", "10Gi")
+                        })
+                    )
+                )
+            )
 
         # CREATE DEPLOYMENT RESOURCE
         containers = []
@@ -106,6 +151,14 @@ class GkeDeployment(pulumi.ComponentResource):
             EnvVarArgs(
                 name="PROJECT_NAME",
                 value=project_name
+            ),
+            EnvVarArgs(
+                name="PROJECT_ID",
+                value=project_id
+            ),
+            EnvVarArgs(
+                name="CLUSTER_PROJECT_ID",
+                value=cluster_project_id,
             ),
             EnvVarArgs(
                 name="TARGET",
@@ -124,6 +177,8 @@ class GkeDeployment(pulumi.ComponentResource):
                 value=sane_utils.get_var_for_target("publish_procevents_matching", default="*")
             ),
         ]
+
+        app_container_env.extend(env_var_secrets)
 
         if use_firestore:
             firestore_id = sane_utils.get_firestore_id()
@@ -184,6 +239,35 @@ class GkeDeployment(pulumi.ComponentResource):
         if "env" in app_container_kwargs:
             app_container_env.extend(app_container_kwargs.pop("env"))
 
+        if app_container_pod_spec_kwargs is None:
+            app_container_pod_spec_kwargs = {}
+
+        # PVC
+        volumes = app_container_pod_spec_kwargs.get("volumes", [])
+        volume_mounts = app_container_kwargs.pop("volume_mounts", [])
+        for _name, _data in app_container_pvc_mounts.items():
+            volumes.append(
+                kubernetes.core.v1.VolumeArgs(
+                    name=_name,
+                    persistent_volume_claim=kubernetes.core.v1.PersistentVolumeClaimVolumeSourceArgs(
+                        claim_name=_name,
+                    )
+                )
+            )
+            volume_mounts.append(
+                kubernetes.core.v1.VolumeMountArgs(
+                    name=_name,
+                    mount_path=_data["mount_path"]
+                )
+            )
+
+        if len(volumes):
+            app_container_pod_spec_kwargs["volumes"] = volumes
+
+        if len(volume_mounts):
+            app_container_kwargs["volume_mounts"] = volume_mounts
+
+
         app_container = kubernetes.core.v1.ContainerArgs(
             image=self.image.image.repo_digest,
             name=resource_name,
@@ -224,10 +308,14 @@ class GkeDeployment(pulumi.ComponentResource):
                 )
             )
 
+        if deployment_spec_kwargs is None:
+            deployment_spec_kwargs = {}
+
         self.deployment = kubernetes.apps.v1.Deployment(
             f"{resource_name}_deployment",
             metadata=kubernetes.meta.v1.ObjectMetaArgs(
                 name=resource_name,
+                namespace=namespace,
                 labels={
                     "krules.dev/app": resource_name,
                 },
@@ -245,14 +333,19 @@ class GkeDeployment(pulumi.ComponentResource):
                         labels={
                             "krules.dev/app": resource_name,
                         },
+                        annotations={
+                            "kubectl.kubernetes.io/default-container": resource_name,
+                        },
                     ),
                     spec=kubernetes.core.v1.PodSpecArgs(
                         service_account=ksa.metadata.apply(
                             lambda metadata: metadata.get("name")
                         ),
                         containers=containers,
+                        **app_container_pod_spec_kwargs,
                     ),
                 ),
+                **deployment_spec_kwargs,
             ),
         )
 

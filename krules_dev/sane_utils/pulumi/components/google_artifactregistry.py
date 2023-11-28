@@ -25,7 +25,7 @@ class ArtifactRegistry(pulumi.ComponentResource):
         self.repository = gcp.artifactregistry.Repository(
             resource_name,
             location=region,
-            repository_id=sane_utils.name_resource(format.lower()),
+            repository_id=sane_utils.name_resource(sane_utils.check_env("project_name")),
             format=format,
             opts=pulumi.ResourceOptions(parent=self)
         )

@@ -59,7 +59,6 @@ class CloudRun(pulumi.ComponentResource):
 
         # CREATE SERVICE ACCOUNT (if None)
         if sa is None:
-
             # account id must be <= 28 chars
             # we use a compressed name
             # display name is used to provide account details
@@ -69,7 +68,6 @@ class CloudRun(pulumi.ComponentResource):
             account_id = f"ksa-{resource_name.translate(trans_tbl)}{m.hexdigest()}"[:28]
             display_name = f"KSA for {project_name}/{target}/{resource_name}"
 
-
             self.sa = GoogleServiceAccount(
                 f"ksa-{resource_name}",
                 account_id=account_id,
@@ -78,7 +76,7 @@ class CloudRun(pulumi.ComponentResource):
                 access_secrets=access_secrets,
                 publish_to=publish_to,
                 use_firestore=use_firestore,
-                #subscribe_to=subscriptions,
+                # subscribe_to=subscriptions,
                 opts=pulumi.ResourceOptions(parent=self),
             )
             sa = self.sa.sa
@@ -192,13 +190,14 @@ class CloudRun(pulumi.ComponentResource):
         # create eventarc triggers
         project_number = gcp_resourcemanager_v1.get_project(project_id).project_number
         if subscribe_to is None:
-            subscribe_to = []
+            subscribe_to = {}
+        self.triggers = []
         for _name, sub_kwargs in subscribe_to.items():
             _matching_criterias = [TriggerMatchingCriteriaArgs(**m_kwargs)
                                    for m_kwargs in sub_kwargs["matching_criterias"]]
             _event_data_content_type = sub_kwargs.get("event_data_content_type", "application/protobuf")
-            _path = sub_kwargs["path"]
-            gcp.eventarc.Trigger(
+            _path = sub_kwargs.get("path", "/")
+            trigger = gcp.eventarc.Trigger(
                 _name,
                 name=sane_utils.name_resource(_name),
                 matching_criterias=_matching_criterias,
@@ -214,6 +213,7 @@ class CloudRun(pulumi.ComponentResource):
                 ),
                 opts=pulumi.ResourceOptions(parent=self),
             )
+            self.triggers.append(trigger)
             # eventarc_firestore_trigger_written = gcp.eventarc.Trigger(
             #     "eventarc-firestore-trigger-written",
             #     matching_criterias=[
@@ -314,6 +314,3 @@ class CloudRun(pulumi.ComponentResource):
         #         )
         #     )
         # )
-
-
-

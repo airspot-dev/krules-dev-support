@@ -73,7 +73,7 @@ def get_namespace(project_name=None, target=None) -> str:
 
 @inject
 def get_firestore_database(project_name=None, target=None) -> str:
-    return get_var_for_target("firestore_database", target=target, default=project_name)
+    return get_var_for_target("firestore_database", target=target, default="(default)")
 
 
 @inject
