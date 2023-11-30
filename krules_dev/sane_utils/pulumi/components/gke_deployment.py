@@ -92,6 +92,8 @@ class GkeDeployment(pulumi.ComponentResource):
 
         env_var_secrets = []
         google_secrets = []
+        if access_secrets is None:
+            access_secrets = []
         for secret in access_secrets:
             from_env = sane_utils.get_var_for_target(secret)
             if from_env is None:
