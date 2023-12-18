@@ -684,7 +684,7 @@ def make_copy_source_recipe(location: str,
 def get_var_for_target(name: str, target: str = None, mandatory: bool = False, default=None) -> str | None:
     if target is None:
         target, _ = get_targets_info()
-    name = name.upper()
+    name = name.upper().replace("-", "_")
     target = target.upper()
     var_name = f"{target}_{name}"
     if var_name in os.environ:

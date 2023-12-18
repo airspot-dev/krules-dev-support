@@ -1,8 +1,11 @@
+import hashlib
 import inspect
 from typing import Callable
 
 from . import get_var_for_target, get_targets_info
 from . import check_env
+from .. import sane_utils
+
 
 def get_target() -> str:
     target, _ = get_targets_info()
@@ -51,6 +54,15 @@ def name_resource(resource_name, target=None, force=False) -> str:
 
 
 @inject
+def get_hashed_resource_name(resource_name, target=None, prefix=""):
+    trans_tbl = str.maketrans(dict.fromkeys('aeiouAEIOU-_'))
+    m = hashlib.sha256()
+    m.update(sane_utils.name_resource(resource_name, target=target, force=True).encode())
+    account_id = f"ksa-{resource_name.translate(trans_tbl)}{m.hexdigest()}"[:28]
+    return account_id
+
+
+@inject
 def get_project_id(target=None) -> str:
     return get_var_for_target("project_id", target)
 
@@ -85,6 +97,7 @@ def get_firestore_project_id(target=None) -> str:
 def get_firestore_location(target=None) -> str:
     return get_var_for_target("firestore_location", target=target, default=get_region())
 
+
 @inject
 def get_firestore_id(target=None, firestore_project_id=None, firestore_location=None, firestore_database=None) -> str:
     return f"projects/{firestore_project_id}/databases/{firestore_database}"
@@ -93,7 +106,3 @@ def get_firestore_id(target=None, firestore_project_id=None, firestore_location=
 @inject
 def get_secretmanager_project_id(target=None) -> str:
     return get_var_for_target("secretmanager_project_id", target=target, default=get_project_id())
-
-
-
-

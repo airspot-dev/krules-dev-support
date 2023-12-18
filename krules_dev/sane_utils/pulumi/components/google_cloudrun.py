@@ -110,7 +110,7 @@ class CloudRun(pulumi.ComponentResource):
             ),
             ServiceTemplateContainerEnvArgs(
                 name="CE_SOURCE",
-                value=resource_name,
+                value=sane_utils.get_var_for_target("ce_source", resource_name),
             ),
             ServiceTemplateContainerEnvArgs(
                 name="PUBLISH_PROCEVENTS_LEVEL",
@@ -122,14 +122,20 @@ class CloudRun(pulumi.ComponentResource):
             ),
         ])
 
+        pysnooper_disabled = bool(eval(sane_utils.get_var_for_target("pysnooper_disabled", default="1")))
+        if pysnooper_disabled:
+            app_container_env.append(
+                ServiceTemplateContainerEnvArgs(
+                    name="PYSNOOPER_DISABLED",
+                    value="1"
+                )
+            )
+
+
         # project_number = gcp_resourcemanager_v1.get_project(project=secretmanager_project_id).project_number
         if access_secrets is None:
             access_secrets = []
         for secret in access_secrets:
-            # secret_ref = gcp.secretmanager.get_secret(
-            #     project=secretmanager_project_id,
-            #     secret_id=sane_utils.name_resource(secret)
-
             app_container_env.append(
                 ServiceTemplateContainerEnvArgs(
                     name=secret.upper(),

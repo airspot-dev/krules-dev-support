@@ -8,7 +8,7 @@ from pulumi_kubernetes.core.v1 import ServiceAccount, ServiceAccountPatch
 from pulumi_kubernetes.meta.v1 import ObjectMetaPatchArgs
 
 from krules_dev import sane_utils
-from krules_dev.sane_utils import inject
+from krules_dev.sane_utils import inject, get_hashed_resource_name
 
 
 class GoogleServiceAccount(pulumi.ComponentResource):
@@ -39,8 +39,7 @@ class GoogleServiceAccount(pulumi.ComponentResource):
             subscribe_to = {}
 
         if account_id is None:
-            account_id = resource_name
-        account_id = sane_utils.name_resource(account_id)
+            account_id = get_hashed_resource_name(resource_name, prefix="sa-")
 
         self.sa = gcp.serviceaccount.Account(
             resource_name,

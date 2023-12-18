@@ -1,7 +1,6 @@
-import hashlib
 import os
 import re
-from typing import List, Mapping, Sequence, Tuple, Any, TypedDict
+from typing import List, Mapping, Sequence, Tuple, Any
 
 import pulumi
 import pulumi_gcp as gcp
@@ -12,7 +11,7 @@ from pulumi_kubernetes.core.v1 import ServiceAccount, EnvVarArgs, ServiceSpecTyp
     ResourceRequirementsArgs
 
 from krules_dev import sane_utils
-from krules_dev.sane_utils import inject
+from krules_dev.sane_utils import inject, get_hashed_resource_name
 from krules_dev.sane_utils.consts import PUBSUB_PULL_CE_SUBSCRIBER_IMAGE
 from krules_dev.sane_utils.pulumi.components import SaneDockerImage, GoogleServiceAccount
 
@@ -69,10 +68,7 @@ class GkeDeployment(pulumi.ComponentResource):
         # account id must be <= 28 chars
         # we use a compressed name
         # display name is used to provide account details
-        trans_tbl = str.maketrans(dict.fromkeys('aeiouAEIOU-_'))
-        m = hashlib.sha256()
-        m.update(sane_utils.name_resource(resource_name, force=True).encode())
-        account_id = f"ksa-{resource_name.translate(trans_tbl)}{m.hexdigest()}"[:28]
+        account_id = get_hashed_resource_name(resource_name, prefix="ksa-")
         display_name = f"KSA for {project_name}/{target}/{resource_name}"
 
         # create subscriptions
@@ -105,7 +101,6 @@ class GkeDeployment(pulumi.ComponentResource):
                         value=from_env
                     )
                 )
-
         self.sa = GoogleServiceAccount(
             f"ksa-{resource_name}",
             account_id=account_id,
@@ -168,7 +163,7 @@ class GkeDeployment(pulumi.ComponentResource):
             ),
             EnvVarArgs(
                 name="CE_SOURCE",
-                value=resource_name,
+                value=sane_utils.get_var_for_target("ce_source", resource_name),
             ),
             EnvVarArgs(
                 name="PUBLISH_PROCEVENTS_LEVEL",
@@ -179,6 +174,15 @@ class GkeDeployment(pulumi.ComponentResource):
                 value=sane_utils.get_var_for_target("publish_procevents_matching", default="*")
             ),
         ]
+
+        pysnooper_disabled = bool(eval(sane_utils.get_var_for_target("pysnooper_disabled", default="1")))
+        if pysnooper_disabled:
+            app_container_env.append(
+                EnvVarArgs(
+                    name="PYSNOOPER_DISABLED",
+                    value="1"
+                )
+            )
 
         app_container_env.extend(env_var_secrets)
 
@@ -206,7 +210,7 @@ class GkeDeployment(pulumi.ComponentResource):
         # project_number = gcp_resourcemanager_v1.get_project(project=secretmanager_project_id).project_number
         if access_secrets is None:
             access_secrets = []
-        for secret in access_secrets:
+        for secret in google_secrets:
             # secret_ref = gcp.secretmanager.get_secret(
             #     project=secretmanager_project_id,
             #     secret_id=sane_utils.name_resource(secret)
@@ -228,10 +232,12 @@ class GkeDeployment(pulumi.ComponentResource):
 
         if publish_to is None:
             publish_to = {}
-        for _, topic in publish_to.items():
+
+        for k_topic, topic in publish_to.items():
             app_container_env.append(
                 EnvVarArgs(
-                    name=topic.name.apply(lambda _name: f"{_name}_topic".upper()),
+                    #name=topic.name.apply(lambda _name: f"{_name.replace('-', '_')}_topic".upper()),
+                    name=f"{k_topic}_topic".upper(),
                     value=topic.id.apply(lambda _id: _id),
                 )
             )
@@ -382,3 +388,4 @@ class GkeDeployment(pulumi.ComponentResource):
             )
 
         self.register_outputs({})
+
