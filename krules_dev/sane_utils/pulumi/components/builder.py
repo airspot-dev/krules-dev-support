@@ -152,4 +152,11 @@ class SaneDockerImage(pulumi.ComponentResource):
                 image_name=image_name
             )
 
+        self.repo_digest = pulumi.Output.all(
+            self.image.image_name,
+            self.image.repo_digest,
+        ).apply(
+            lambda args: f"{args[0]}@{args[1].split('@')[1]}"
+        )
+
         self.register_outputs({})

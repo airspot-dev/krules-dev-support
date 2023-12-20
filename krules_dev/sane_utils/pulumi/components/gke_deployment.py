@@ -277,7 +277,7 @@ class GkeDeployment(pulumi.ComponentResource):
 
 
         app_container = kubernetes.core.v1.ContainerArgs(
-            image=self.image.image.repo_digest,
+            image=self.image.repo_digest,
             name=resource_name,
             env=app_container_env,
             **app_container_kwargs,
