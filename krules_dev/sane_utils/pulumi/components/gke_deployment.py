@@ -237,7 +237,7 @@ class GkeDeployment(pulumi.ComponentResource):
             app_container_env.append(
                 EnvVarArgs(
                     #name=topic.name.apply(lambda _name: f"{_name.replace('-', '_')}_topic".upper()),
-                    name=f"{k_topic}_topic".upper(),
+                    name=f"{k_topic.replace('-', '_')}_topic".upper(),
                     value=topic.id.apply(lambda _id: _id),
                 )
             )
