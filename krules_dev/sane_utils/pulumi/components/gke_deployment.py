@@ -318,7 +318,6 @@ class GkeDeployment(pulumi.ComponentResource):
 
         if deployment_spec_kwargs is None:
             deployment_spec_kwargs = {}
-
         self.deployment = kubernetes.apps.v1.Deployment(
             f"{resource_name}_deployment",
             metadata=kubernetes.meta.v1.ObjectMetaArgs(

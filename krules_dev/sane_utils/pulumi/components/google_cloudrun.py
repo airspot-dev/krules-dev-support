@@ -1,22 +1,18 @@
 import hashlib
-import os
-from typing import List, Mapping, Sequence, Tuple, Any
+from typing import List, Mapping, Sequence, Any
 
 import pulumi
 import pulumi_gcp as gcp
-import pulumi_kubernetes as kubernetes
-from pulumi import Output, Input
+from pulumi import Output
 from pulumi_gcp.artifactregistry import Repository
 from pulumi_gcp.cloudrunv2 import ServiceTemplateContainerEnvArgs, ServiceTemplateArgs, \
     ServiceTemplateContainerEnvValueSourceArgs, ServiceTemplateContainerEnvValueSourceSecretKeyRefArgs
 from pulumi_gcp.cloudrunv2.outputs import ServiceTemplateContainer
 from pulumi_gcp.eventarc import TriggerMatchingCriteriaArgs, TriggerDestinationCloudRunServiceArgs
-from pulumi_kubernetes.core.v1 import ServiceAccount, EnvVarArgs, ServiceSpecType
 from pulumi_google_native.cloudresourcemanager import v1 as gcp_resourcemanager_v1
 
 from krules_dev import sane_utils
 from krules_dev.sane_utils import inject
-from krules_dev.sane_utils.consts import PUBSUB_PULL_CE_SUBSCRIBER_IMAGE
 from krules_dev.sane_utils.pulumi.components import SaneDockerImage, GoogleServiceAccount
 
 
@@ -150,10 +146,10 @@ class CloudRun(pulumi.ComponentResource):
 
         if publish_to is None:
             publish_to = {}
-        for _, topic in publish_to.items():
+        for _name, topic in publish_to.items():
             app_container_env.append(
                 ServiceTemplateContainerEnvArgs(
-                    name=topic.name.apply(lambda _name: f"{_name.replace('-', '_')}_topic".upper()),
+                    name=f"{_name.replace('-', '_')}_topic".upper(),
                     value=topic.id.apply(lambda _id: _id),
                 )
             )
