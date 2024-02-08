@@ -1,5 +1,6 @@
 import hashlib
 import inspect
+import os
 from typing import Callable
 
 from . import get_var_for_target, get_targets_info
@@ -11,6 +12,12 @@ def get_target() -> str:
     target, _ = get_targets_info()
     return target
 
+def get_app_name() -> str:
+    if "APP_NAME" not in os.environ:
+        caller_frame = inspect.stack()[1]
+        caller_path = caller_frame.filename
+        return os.path.basename(os.path.dirname(os.path.abspath(caller_path)))
+    return os.environ["APP_NAME"]
 
 def inject(function):
     def _wraps(*args, **kwargs):
