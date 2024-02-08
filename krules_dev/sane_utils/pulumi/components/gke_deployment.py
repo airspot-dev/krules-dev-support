@@ -163,7 +163,7 @@ class GkeDeployment(pulumi.ComponentResource):
             ),
             EnvVarArgs(
                 name="CE_SOURCE",
-                value=sane_utils.get_var_for_target("ce_source", resource_name),
+                value=sane_utils.get_var_for_target("ce_source", default=resource_name),
             ),
             EnvVarArgs(
                 name="PUBLISH_PROCEVENTS_LEVEL",
