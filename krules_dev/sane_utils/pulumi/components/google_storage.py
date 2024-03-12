@@ -13,6 +13,7 @@ class Bucket(gcp.storage.Bucket):
         if "location" not in kwargs:
             kwargs['location'] = "EU"
 
-        kwargs['name'] = sane_utils.name_resource(resource_name, force=True)
+        if "name" not in kwargs:
+            kwargs['name'] = sane_utils.name_resource(resource_name)
 
         super().__init__(resource_name, *args, **kwargs)
