@@ -146,6 +146,10 @@ class GkeDeployment(pulumi.ComponentResource):
 
         app_container_env = [
             EnvVarArgs(
+                name="APP_NAME",
+                value=sane_utils.get_var_for_target("app_name", default=resource_name)
+            ),
+            EnvVarArgs(
                 name="PROJECT_NAME",
                 value=project_name
             ),
