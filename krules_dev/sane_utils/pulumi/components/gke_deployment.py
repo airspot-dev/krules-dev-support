@@ -218,7 +218,7 @@ class GkeDeployment(pulumi.ComponentResource):
 
         if datastore_id:
             regex = r"projects/(?P<project_id>.*)/databases/(?P<database>.*)"
-            match = re.match(regex, firestore_id)
+            match = re.match(regex, datastore_id)
             if match:
                 dd = match.groupdict()
                 app_container_env.extend([
