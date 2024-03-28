@@ -26,6 +26,8 @@ class GoogleServiceAccount(pulumi.ComponentResource):
                  publish_to: Mapping[str, gcp.pubsub.Topic] = None,
                  subscribe_to: Mapping[str, gcp.pubsub.Subscription] = None,
                  use_firestore: bool = False,
+                 firestore_id: str = None,
+                 datastore_id: str = None,
                  secretmanager_project_id: str = None,
                  opts: pulumi.ResourceOptions = None) -> None:
 
@@ -76,7 +78,7 @@ class GoogleServiceAccount(pulumi.ComponentResource):
                 ),
             )
 
-        #project_number = gcp_resourcemanager_v1.get_project(project=secretmanager_project_id).project_number
+        # project_number = gcp_resourcemanager_v1.get_project(project=secretmanager_project_id).project_number
         for secret in access_secrets:
             secret_ref = gcp.secretmanager.get_secret(
                 project=secretmanager_project_id,
@@ -90,7 +92,7 @@ class GoogleServiceAccount(pulumi.ComponentResource):
                 secret_id=secret_ref.secret_id,
                 role="roles/secretmanager.secretAccessor",
                 member=self.sa.email.apply(
-                        lambda email: f"serviceAccount:{email}"
+                    lambda email: f"serviceAccount:{email}"
                 ),
                 opts=pulumi.ResourceOptions(parent=self),
             )
@@ -130,9 +132,12 @@ class GoogleServiceAccount(pulumi.ComponentResource):
             )
             setattr(self, res_name, policy)
 
-        if use_firestore:
+        if use_firestore or firestore_id is not None:
 
-            firestore = gcp.firestore.Database.get("firestore_iam_db", sane_utils.get_firestore_id())
+            if firestore_id is None:
+                sane_utils.get_firestore_id()
+
+            firestore = gcp.firestore.Database.get("firestore_iam_db", firestore_id)
             gcp.projects.IAMMember(
                 "firestore_iam",
                 condition=gcp.projects.IAMMemberConditionArgs(
@@ -145,6 +150,23 @@ class GoogleServiceAccount(pulumi.ComponentResource):
                     lambda email: f"serviceAccount:{email}",
                 ),
                 project=firestore.project,
+                role="roles/datastore.user",
+            )
+
+        if datastore_id is not None:
+            datastore = gcp.firestore.Database.get("datastore_iam_db", datastore_id)
+            gcp.projects.IAMMember(
+                "datastore_iam",
+                condition=gcp.projects.IAMMemberConditionArgs(
+                    title="Access datastore database",
+                    expression=datastore.id.apply(
+                        lambda _id: f"resource.name=='{_id}'"
+                    )
+                ),
+                member=self.sa.email.apply(
+                    lambda email: f"serviceAccount:{email}",
+                ),
+                project=datastore.project,
                 role="roles/datastore.user",
             )
 

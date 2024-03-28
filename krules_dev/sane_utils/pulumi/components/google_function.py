@@ -35,6 +35,10 @@ class GoogleFunction(pulumi.ComponentResource):
                  # subscribe_to: Mapping[str, Mapping[str, Any]] = None,
                  subscribe_to: gcp.pubsub.Topic = None,
                  use_firestore: bool = None,
+                 firestore_id: str = None,
+                 datastore_id: str = None,
+                 event_trigger: gcp.cloudfunctionsv2.FunctionEventTriggerArgs = None,
+
                  opts: pulumi.ResourceOptions = None,
                  **extra_kwargs
                  ) -> None:
@@ -65,6 +69,8 @@ class GoogleFunction(pulumi.ComponentResource):
                 access_secrets=access_secret_names,
                 publish_to=publish_to,
                 use_firestore=use_firestore,
+                firestore_id=firestore_id,
+                datastore_id=datastore_id,
                 # subscribe_to=subscriptions,
                 opts=pulumi.ResourceOptions(parent=self),
             )
@@ -117,8 +123,9 @@ class GoogleFunction(pulumi.ComponentResource):
         for _name, topic in publish_to.items():
             environment_variables[f"{_name.replace('-', '_')}_topic".upper()] = topic.id.apply(lambda _id: _id)
 
-        if use_firestore:
-            firestore_id = sane_utils.get_firestore_id()
+        if use_firestore or firestore_id:
+            if firestore_id is None:
+                firestore_id = sane_utils.get_firestore_id()
             regex = r"projects/(?P<project_id>.*)/databases/(?P<database>.*)"
             match = re.match(regex, firestore_id)
             if match:
@@ -126,6 +133,15 @@ class GoogleFunction(pulumi.ComponentResource):
                 environment_variables["FIRESTORE_DATABASE"] = dd['database']
                 environment_variables["FIRESTORE_PROJECT_ID"] = dd['project_id']
                 environment_variables["FIRESTORE_ID"] = firestore_id
+
+        if datastore_id:
+            regex = r"projects/(?P<project_id>.*)/databases/(?P<database>.*)"
+            match = re.match(regex, firestore_id)
+            if match:
+                dd = match.groupdict()
+                environment_variables["DATASTORE_DATABASE"] = dd['database']
+                environment_variables["DATASTORE_PROJECT_ID"] = dd['project_id']
+                environment_variables["DATASTORE_ID"] = datastore_id
 
         if len(envvar_secrets):
             secret_environment_variables: list = service_config_kwargs.get("secret_environment_variables", [])
