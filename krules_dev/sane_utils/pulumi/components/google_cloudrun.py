@@ -35,6 +35,8 @@ class CloudRun(pulumi.ComponentResource):
                  publish_to: Mapping[str, gcp.pubsub.Topic] = None,
                  subscribe_to: Mapping[str, Mapping[str, Any]] = None,
                  use_firestore: bool = None,
+                 firestore_id: str = None,
+                 datastore_id: str = None,
                  service_kwargs: dict = None,
                  service_template_kwargs: dict = None,
                  app_container_kwargs: dict = None,
@@ -72,6 +74,8 @@ class CloudRun(pulumi.ComponentResource):
                 access_secrets=access_secrets,
                 publish_to=publish_to,
                 use_firestore=use_firestore,
+                firestore_id=firestore_id,
+                datastore_id=datastore_id,
                 # subscribe_to=subscriptions,
                 opts=pulumi.ResourceOptions(parent=self),
             )

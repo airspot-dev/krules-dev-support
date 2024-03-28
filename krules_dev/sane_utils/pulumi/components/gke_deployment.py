@@ -35,6 +35,8 @@ class GkeDeployment(pulumi.ComponentResource):
                  publish_to: Mapping[str, gcp.pubsub.Topic] = None,
                  subscribe_to: Sequence[Tuple[str, Mapping[str, Any]]] = None,
                  use_firestore: bool = False,
+                 firestore_id: str = None,
+                 datastore_id: str = None,
                  secretmanager_project_id: str = None,
                  deployment_spec_kwargs: dict = None,
                  ce_target_port: int = 8080,
@@ -112,6 +114,8 @@ class GkeDeployment(pulumi.ComponentResource):
             publish_to=publish_to,
             subscribe_to=subscriptions,
             use_firestore=use_firestore,
+            firestore_id=firestore_id,
+            datastore_id=datastore_id,
             opts=pulumi.ResourceOptions(parent=self),
         )
 
@@ -190,8 +194,9 @@ class GkeDeployment(pulumi.ComponentResource):
 
         app_container_env.extend(env_var_secrets)
 
-        if use_firestore:
-            firestore_id = sane_utils.get_firestore_id()
+        if use_firestore or firestore_id:
+            if firestore_id is None:
+                firestore_id = sane_utils.get_firestore_id()
             regex = r"projects/(?P<project_id>.*)/databases/(?P<database>.*)"
             match = re.match(regex, firestore_id)
             if match:
@@ -210,6 +215,27 @@ class GkeDeployment(pulumi.ComponentResource):
                         value=firestore_id,
                     )
                 ])
+
+        if datastore_id:
+            regex = r"projects/(?P<project_id>.*)/databases/(?P<database>.*)"
+            match = re.match(regex, firestore_id)
+            if match:
+                dd = match.groupdict()
+                app_container_env.extend([
+                    EnvVarArgs(
+                        name="DATASTORE_DATABASE",
+                        value=dd['database'],
+                    ),
+                    EnvVarArgs(
+                        name="DATASTORE_PROJECT_ID",
+                        value=dd['project_id']
+                    ),
+                    EnvVarArgs(
+                        name="DATASTORE_ID",
+                        value=datastore_id,
+                    )
+                ])
+
 
         # project_number = gcp_resourcemanager_v1.get_project(project=secretmanager_project_id).project_number
         if access_secrets is None:

@@ -28,17 +28,12 @@ class GoogleFunction(pulumi.ComponentResource):
                  sa: gcp.serviceaccount.Account | Output[gcp.serviceaccount.Account] = None,
                  build_config_kwargs: Mapping[str, Any] = None,
                  service_config_kwargs: Mapping[str, Any] = None,
-                 # require_authentication: bool = True,
                  access_secrets: List[str | Tuple[str, str]] = None,
-                 access_secrets_volumes: Mapping[str, str] = None,
                  publish_to: Mapping[str, gcp.pubsub.Topic] = None,
-                 # subscribe_to: Mapping[str, Mapping[str, Any]] = None,
                  subscribe_to: gcp.pubsub.Topic = None,
                  use_firestore: bool = None,
                  firestore_id: str = None,
                  datastore_id: str = None,
-                 event_trigger: gcp.cloudfunctionsv2.FunctionEventTriggerArgs = None,
-
                  opts: pulumi.ResourceOptions = None,
                  **extra_kwargs
                  ) -> None:
@@ -71,7 +66,6 @@ class GoogleFunction(pulumi.ComponentResource):
                 use_firestore=use_firestore,
                 firestore_id=firestore_id,
                 datastore_id=datastore_id,
-                # subscribe_to=subscriptions,
                 opts=pulumi.ResourceOptions(parent=self),
             )
             sa = self.sa.sa
