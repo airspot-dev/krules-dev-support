@@ -50,7 +50,14 @@ def make_pulumi_stack_recipes(base_stack_name, project_name=None, target=None, p
 
         log.debug("Successfully initialized stack", target=target, project_name=project_name)
 
-        _ = stack.up(on_output=log.debug)
+        pulumi_up_kwargs = {}
+        if bool(eval(os.environ.get("PULUMI_DEBUG", "0"))):
+            pulumi_up_kwargs["debug"] = True
+            pulumi_up_kwargs["log_verbosity"] = 9
+            pulumi_up_kwargs["log_to_std_err"] = True
+            pulumi_up_kwargs["log_flow"] = True
+
+        _ = stack.up(on_output=log.debug, **pulumi_up_kwargs)
 
         log.info("Stack updated")
 
@@ -105,12 +112,11 @@ def make_pulumi_stack_recipes(base_stack_name, project_name=None, target=None, p
 #             raise Exception("CANNOT APPLY")
 @inject
 def get_stack_reference(
-    base_stack_name: str,
-    project_name: str = None,
-    target: str = None,
-    organization = os.environ.get("PULUMI_ORGANIZATION", "organization")
+        base_stack_name: str,
+        project_name: str = None,
+        target: str = None,
+        organization=os.environ.get("PULUMI_ORGANIZATION", "organization")
 ) -> StackReference:
-
     return StackReference(
         f"{organization}/{project_name}/{base_stack_name}-{target}"
     )
