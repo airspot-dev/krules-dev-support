@@ -49,13 +49,14 @@ class GoogleFunction(pulumi.ComponentResource):
         mount_secrets = [x for x in access_secrets if isinstance(x, (tuple, list))]
 
         if sa is None and "service_account_email" not in service_config_kwargs:
+            
             trans_tbl = str.maketrans(dict.fromkeys('aeiouAEIOU-_'))
             m = hashlib.sha256()
             m.update(sane_utils.name_resource(resource_name, force=True).encode())
 
             account_id = f"fnsa-{resource_name.translate(trans_tbl)}{m.hexdigest()}"[:28]
             display_name = f"Function SA for {project_name}/{target}/{resource_name}"
-
+            
             self.sa = GoogleServiceAccount(
                 f"ksa-{resource_name}",
                 account_id=account_id,

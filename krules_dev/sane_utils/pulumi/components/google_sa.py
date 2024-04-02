@@ -32,7 +32,9 @@ class GoogleServiceAccount(pulumi.ComponentResource):
                  opts: pulumi.ResourceOptions = None) -> None:
 
         super().__init__('sane:GoogleServiceAccount', resource_name, None, opts)
-
+        
+        if not use_firestore and firestore_id is not None and len(firestore_id):
+            use_firestore = True
         if access_secrets is None:
             access_secrets = []
         if publish_to is None:
@@ -131,8 +133,8 @@ class GoogleServiceAccount(pulumi.ComponentResource):
                 policy_data=my_policy.policy_data
             )
             setattr(self, res_name, policy)
-
-        if use_firestore or firestore_id is not None:
+        if use_firestore:
+        # if use_firestore or firestore_id is not None:
 
             if firestore_id is None:
                 sane_utils.get_firestore_id()
