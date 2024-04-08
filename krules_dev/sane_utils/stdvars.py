@@ -12,12 +12,14 @@ def get_target() -> str:
     target, _ = get_targets_info()
     return target
 
+
 def get_app_name() -> str:
     if "APP_NAME" not in os.environ:
         caller_frame = inspect.stack()[1]
         caller_path = caller_frame.filename
         return os.path.basename(os.path.dirname(os.path.abspath(caller_path)))
     return os.environ["APP_NAME"]
+
 
 def inject(function):
     def _wraps(*args, **kwargs):
@@ -34,6 +36,7 @@ def inject(function):
         _set("cluster_project_id", get_cluster_project_id)
         _set("region", get_region)
         _set("namespace", get_namespace)
+        _set("use_firestore", get_use_firestore)
         _set("firestore_database", get_firestore_database)
         _set("firestore_project_id", get_firestore_project_id)
         _set("firestore_location", get_firestore_location)
@@ -91,6 +94,14 @@ def get_namespace(project_name=None, target=None) -> str:
 
 
 @inject
+def get_use_firestore(target=None) -> bool:
+    if get_var_for_target("firestore_database", target=target, default=False) \
+            or get_var_for_target("firestore_id", target=target, default=False):
+        return True
+    return False
+
+
+@inject
 def get_firestore_database(project_name=None, target=None) -> str:
     return get_var_for_target("firestore_database", target=target, default="(default)")
 
@@ -106,7 +117,8 @@ def get_firestore_location(target=None) -> str:
 
 
 @inject
-def get_firestore_id(target=None, firestore_project_id=None, firestore_location=None, firestore_database=None) -> str:
+def get_firestore_id(target=None, use_firestore=False, firestore_project_id=None, firestore_location=None,
+                     firestore_database=None) -> str:
     return f"projects/{firestore_project_id}/databases/{firestore_database}"
 
 
