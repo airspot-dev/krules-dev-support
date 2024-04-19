@@ -25,16 +25,14 @@ class GoogleServiceAccount(pulumi.ComponentResource):
                  access_secrets: List[str] = None,
                  publish_to: Mapping[str, gcp.pubsub.Topic] = None,
                  subscribe_to: Mapping[str, gcp.pubsub.Subscription] = None,
-                 use_firestore: bool = False,
+                 use_firestore: bool = None,
                  firestore_id: str = None,
                  datastore_id: str = None,
                  secretmanager_project_id: str = None,
                  opts: pulumi.ResourceOptions = None) -> None:
 
         super().__init__('sane:GoogleServiceAccount', resource_name, None, opts)
-        
-        if not use_firestore and firestore_id is not None and len(firestore_id):
-            use_firestore = True
+
         if access_secrets is None:
             access_secrets = []
         if publish_to is None:
