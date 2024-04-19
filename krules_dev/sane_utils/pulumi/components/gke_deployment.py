@@ -33,6 +33,7 @@ class GkeDeployment(pulumi.ComponentResource):
                  ksa: ServiceAccount | Output[ServiceAccount] = None,
                  access_secrets: List[str] = None,
                  publish_to: Mapping[str, gcp.pubsub.Topic] = None,
+                 subscriptions_inject_sidecar: bool = True,
                  subscribe_to: Sequence[Tuple[str, Mapping[str, Any]]] = None,
                  use_firestore: bool = False,
                  firestore_id: str = None,
@@ -319,32 +320,42 @@ class GkeDeployment(pulumi.ComponentResource):
             containers.extend(extra_containers)
 
         # pubsub subscriptions sidecars
-        pull_ce_image = os.environ.get("PUBSUB_PULL_CE_SUBSCRIBER_IMAGE", PUBSUB_PULL_CE_SUBSCRIBER_IMAGE)
-        for _name, subscripton in subscriptions.items():
-            subscription_env = [
-                EnvVarArgs(
-                    name="SUBSCRIPTION",
-                    value=subscripton.id
-                ),
-                EnvVarArgs(
-                    name="CE_SINK",
-                    value=f"http://localhost:{ce_target_port}{ce_target_path}"
-                ),
-            ]
-            if bool(eval(sane_utils.get_var_for_target("debug_subscriptions", default="0"))):
-                subscription_env.append(
+        if subscriptions_inject_sidecar:
+            pull_ce_image = os.environ.get("PUBSUB_PULL_CE_SUBSCRIBER_IMAGE", PUBSUB_PULL_CE_SUBSCRIBER_IMAGE)
+            for _name, subscripton in subscriptions.items():
+                subscription_env = [
                     EnvVarArgs(
-                        name="DEBUG",
-                        value="1"
+                        name="SUBSCRIPTION",
+                        value=subscripton.id
+                    ),
+                    EnvVarArgs(
+                        name="CE_SINK",
+                        value=f"http://localhost:{ce_target_port}{ce_target_path}"
+                    ),
+                ]
+                if bool(eval(sane_utils.get_var_for_target("debug_subscriptions", default="0"))):
+                    subscription_env.append(
+                        EnvVarArgs(
+                            name="DEBUG",
+                            value="1"
+                        )
+                    )
+                containers.append(
+                    kubernetes.core.v1.ContainerArgs(
+                        image=pull_ce_image,
+                        name=_name,
+                        env=subscription_env
                     )
                 )
-            containers.append(
-                kubernetes.core.v1.ContainerArgs(
-                    image=pull_ce_image,
-                    name=_name,
-                    env=subscription_env
+        else:
+            # set environment variable for subscriptions
+            for _name, subscription in subscriptions.items():
+                app_container_env.append(
+                    EnvVarArgs(
+                        name=f"SUBSCRIPTION_{_name.upper().replace('-', '_')}",
+                        value=subscription.id
+                    )
                 )
-            )
 
         if deployment_spec_kwargs is None:
             deployment_spec_kwargs = {}

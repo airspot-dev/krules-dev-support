@@ -24,6 +24,9 @@ pulumi-gcp = ">=7.16.0"
 pulumi_docker = ">=4.4.1"
 pulumi-kubernetes = ">=4.3.0"
 pulumi-google-native = ">=0.31.1"
+# grcpio temporary pinned for pulumi
+grpcio = "~=1.60.1"
+grpcio-status = "~=1.60.1"
 
 [build-system]
 requires = ["poetry-core"]
