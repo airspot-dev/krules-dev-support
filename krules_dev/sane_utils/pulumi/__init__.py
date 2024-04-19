@@ -85,31 +85,6 @@ def make_pulumi_stack_recipes(base_stack_name, project_name=None, target=None, p
 
         log.info("Stack destroyed")
 
-
-# class OutputProxy:
-#
-#     def __init__(self, resource, *props):
-#
-#         if isinstance(resource, dict):
-#             self._dd_props = [resource.get(p) for p in props]
-#         elif isinstance(resource, str):
-#             self._str = resource
-#         elif isinstance(resource, pulumi.Resource):
-#             self._output = pulumi.Output.all(
-#                 *[getattr(resource, p) for p in props]
-#             )
-#         else:
-#             raise Exception(f"UNSUPPORTED TYPE: {type(resource)}")
-#
-#     def apply(self, fn: typing.Callable):
-#         if hasattr(self, "_dd_props"):
-#             return fn(self._dd_props)
-#         elif hasattr(self, "_str"):
-#             return fn(self._str)
-#         elif hasattr(self, "_output"):
-#             return self._output.apply(fn)
-#         else:
-#             raise Exception("CANNOT APPLY")
 @inject
 def get_stack_reference(
         base_stack_name: str,

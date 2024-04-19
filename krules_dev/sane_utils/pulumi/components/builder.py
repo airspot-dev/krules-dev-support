@@ -80,7 +80,7 @@ class SaneDockerImage(pulumi.ComponentResource):
     @inject
     def __init__(
             self, resource_name: str,
-            gcp_repository: dict | Output[dict] = None,
+            gcp_repository: Repository = None,
             image_name: str = None,
             args: dict = None,
             context: str = ".build",
