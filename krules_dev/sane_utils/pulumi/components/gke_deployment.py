@@ -246,17 +246,18 @@ class GkeDeployment(pulumi.ComponentResource):
             #     project=secretmanager_project_id,
             #     secret_id=sane_utils.name_resource(secret)
             # )
-            secret_path = sane_utils.get_var_for_target(f"{secret}_secret_path")
+            repl_secret = secret.replace('-', '_')
+            secret_path = sane_utils.get_var_for_target(f"{repl_secret}_secret_path")
             if secret_path is None:
                 secret_path = "projects/{project}/secrets/{secret}/versions/{secret_version}".format(
                     # project=project_number,
                     project=secretmanager_project_id,
                     secret=sane_utils.name_resource(secret),
-                    secret_version=sane_utils.get_var_for_target(f"{secret}_secret_version", default="latest"),
+                    secret_version=sane_utils.get_var_for_target(f"{repl_secret}_secret_version", default="latest"),
                 )
             app_container_env.append(
                 EnvVarArgs(
-                    name=f"{secret.upper()}_SECRET_PATH",
+                    name=f"{repl_secret.upper()}_SECRET_PATH",
                     value=secret_path
                 )
             )
