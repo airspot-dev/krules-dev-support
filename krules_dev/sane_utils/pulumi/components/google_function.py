@@ -49,14 +49,13 @@ class GoogleFunction(pulumi.ComponentResource):
         mount_secrets = [x for x in access_secrets if isinstance(x, (tuple, list))]
 
         if sa is None and "service_account_email" not in service_config_kwargs:
-            
             trans_tbl = str.maketrans(dict.fromkeys('aeiouAEIOU-_'))
             m = hashlib.sha256()
             m.update(sane_utils.name_resource(resource_name, force=True).encode())
 
             account_id = f"fnsa-{resource_name.translate(trans_tbl)}{m.hexdigest()}"[:28]
             display_name = f"Function SA for {project_name}/{target}/{resource_name}"
-            
+
             self.sa = GoogleServiceAccount(
                 f"ksa-{resource_name}",
                 account_id=account_id,
@@ -118,9 +117,7 @@ class GoogleFunction(pulumi.ComponentResource):
         for _name, topic in publish_to.items():
             environment_variables[f"{_name.replace('-', '_')}_topic".upper()] = topic.id.apply(lambda _id: _id)
 
-        if use_firestore or firestore_id:
-            if firestore_id is None:
-                firestore_id = sane_utils.get_firestore_id()
+        if firestore_id:
             regex = r"projects/(?P<project_id>.*)/databases/(?P<database>.*)"
             match = re.match(regex, firestore_id)
             if match:
@@ -179,5 +176,11 @@ class GoogleFunction(pulumi.ComponentResource):
             ),
             **extra_kwargs,
         )
+
+        # if "ingress_settings" in service_config_kwargs and service_config_kwargs["ingress_settings"] == "ALLOW_ALL":
+        #     self.function_sa_invoker = gcp.projects.IAMMember("functionInvoker",
+        #                                                       project=cloud_function.project,
+        #                                                       role="roles/cloudrun.invoker",
+        #                                                       member="group:allUsers")
 
         self.function = cloud_function

@@ -137,6 +137,9 @@ class GoogleServiceAccount(pulumi.ComponentResource):
             if firestore_id is None:
                 sane_utils.get_firestore_id()
 
+            if firestore_id is None:
+                raise ValueError("firestore_id is None")
+
             firestore = gcp.firestore.Database.get("firestore_iam_db", firestore_id)
             gcp.projects.IAMMember(
                 "firestore_iam",
