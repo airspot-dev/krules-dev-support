@@ -197,13 +197,13 @@ profile = ["gprof2dot (>=2022.7.29)"]
 
 [[package]]
 name = "google-api-core"
-version = "2.18.0"
+version = "2.19.0"
 description = "Google API client core library"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "google-api-core-2.18.0.tar.gz", hash = "sha256:62d97417bfc674d6cef251e5c4d639a9655e00c45528c4364fbfebb478ce72a9"},
-    {file = "google_api_core-2.18.0-py3-none-any.whl", hash = "sha256:5a63aa102e0049abe85b5b88cb9409234c1f70afcda21ce1e40b285b9629c1d6"},
+    {file = "google-api-core-2.19.0.tar.gz", hash = "sha256:cf1b7c2694047886d2af1128a03ae99e391108a08804f87cfd35970e49c9cd10"},
+    {file = "google_api_core-2.19.0-py3-none-any.whl", hash = "sha256:8661eec4078c35428fd3f69a2c7ee29e342896b70f01d1a1cbcb334372dd6251"},
 ]
 
 [package.dependencies]
@@ -251,13 +251,13 @@ requests = ["requests (>=2.20.0,<3.0.0.dev0)"]
 
 [[package]]
 name = "google-cloud-secret-manager"
-version = "2.19.0"
+version = "2.20.0"
 description = "Google Cloud Secret Manager API client library"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "google-cloud-secret-manager-2.19.0.tar.gz", hash = "sha256:bb918435835a14eb94785f4d4d9087bdcf1b6de306432d7edaa7d62e7f780c30"},
-    {file = "google_cloud_secret_manager-2.19.0-py2.py3-none-any.whl", hash = "sha256:7dd9ad9ab3e70f9a7fbac432938b702ba23bce1207e9bda86463b6d6b1f5cdbb"},
+    {file = "google-cloud-secret-manager-2.20.0.tar.gz", hash = "sha256:a086a7413aaf4fffbd1c4fe9229ef0ce9bcf48f5a8df5b449c4a32deb5a2cfde"},
+    {file = "google_cloud_secret_manager-2.20.0-py2.py3-none-any.whl", hash = "sha256:c20bf22e59d220c51aa84a1db3411b14b83aa71f788fae8d273c03a4bf3e77ed"},
 ]
 
 [package.dependencies]
@@ -396,13 +396,13 @@ files = [
 
 [[package]]
 name = "jinja2"
-version = "3.1.3"
+version = "3.1.4"
 description = "A very fast and expressive template engine."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "Jinja2-3.1.3-py3-none-any.whl", hash = "sha256:7d6d50dd97d52cbc355597bd845fabfbac3f551e1f99619e39a35ce8c370b5fa"},
-    {file = "Jinja2-3.1.3.tar.gz", hash = "sha256:ac8bd6544d4bb2c9792bf3a159e80bba8fda7f07e81bc3aed565432d5925ba90"},
+    {file = "jinja2-3.1.4-py3-none-any.whl", hash = "sha256:bc5dd2abb727a5319567b7a813e6a2e7318c39f4f487cfe6c89c6f9c7d25197d"},
+    {file = "jinja2-3.1.4.tar.gz", hash = "sha256:4a3aee7acbbe7303aede8e9648d13b8bf88a429282aa6122a993f0ac800cb369"},
 ]
 
 [package.dependencies]
@@ -575,12 +575,12 @@ files = [
 
 [[package]]
 name = "pulumi"
-version = "3.113.2"
+version = "3.116.1"
 description = "Pulumi's Python SDK"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "pulumi-3.113.2-py3-none-any.whl", hash = "sha256:832b2864535beb397e5a4b90b548633c041d306dd274b88ae43c872d93cdb4ae"},
+    {file = "pulumi-3.116.1-py3-none-any.whl", hash = "sha256:7b2a93d10d27f205ce7e13a8f14fe67d731c8d2492d977da2db8c6de9bded82e"},
 ]
 
 [package.dependencies]
@@ -609,13 +609,13 @@ semver = ">=2.8.1"
 
 [[package]]
 name = "pulumi-gcp"
-version = "7.19.0"
+version = "7.23.0"
 description = "A Pulumi package for creating and managing Google Cloud Platform resources."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "pulumi_gcp-7.19.0-py3-none-any.whl", hash = "sha256:815bcca7993cf3be0af80c4dc10c4bc82e72ef57245604a926b9ffe221d818b9"},
-    {file = "pulumi_gcp-7.19.0.tar.gz", hash = "sha256:ca7b87d14d374fd56954dc84e7011a50d982d6e5d2342cfed02183a9f2bd5f16"},
+    {file = "pulumi_gcp-7.23.0-py3-none-any.whl", hash = "sha256:cf12f8cb1a65d33b84f9c3b9cdae56855765323e0e261269b6484ae01216e58a"},
+    {file = "pulumi_gcp-7.23.0.tar.gz", hash = "sha256:d0a79962d8f4c1e482dbdf6d6732ab1853b8d48375f35b993e74cac2a2fc57d1"},
 ]
 
 [package.dependencies]
@@ -683,17 +683,16 @@ pyasn1 = ">=0.4.6,<0.7.0"
 
 [[package]]
 name = "pygments"
-version = "2.17.2"
+version = "2.18.0"
 description = "Pygments is a syntax highlighting package written in Python."
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 files = [
-    {file = "pygments-2.17.2-py3-none-any.whl", hash = "sha256:b27c2826c47d0f3219f29554824c30c5e8945175d888647acd804ddd04af846c"},
-    {file = "pygments-2.17.2.tar.gz", hash = "sha256:da46cec9fd2de5be3a8a784f434e4c4ab670b4ff54d605c4c2717e9d49c4c367"},
+    {file = "pygments-2.18.0-py3-none-any.whl", hash = "sha256:b8e6aca0523f3ab76fee51799c488e38782ac06eafcf95e7ba832985c8e7b13a"},
+    {file = "pygments-2.18.0.tar.gz", hash = "sha256:786ff802f32e91311bff3889f6e9a86e81505fe99f2735bb6d60ae0c5004f199"},
 ]
 
 [package.extras]
-plugins = ["importlib-metadata"]
 windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
@@ -772,13 +771,13 @@ files = [
 
 [[package]]
 name = "requests"
-version = "2.31.0"
+version = "2.32.1"
 description = "Python HTTP for Humans."
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 files = [
-    {file = "requests-2.31.0-py3-none-any.whl", hash = "sha256:58cd2187c01e70e6e26505bca751777aa9f2ee0b7f4300988b709f44e013003f"},
-    {file = "requests-2.31.0.tar.gz", hash = "sha256:942c5a758f98d790eaed1a29cb6eefc7ffb0d1cf7af05c3d2791656dbd6ad1e1"},
+    {file = "requests-2.32.1-py3-none-any.whl", hash = "sha256:21ac9465cdf8c1650fe1ecde8a71669a93d4e6f147550483a2967d08396a56a5"},
+    {file = "requests-2.32.1.tar.gz", hash = "sha256:eb97e87e64c79e64e5b8ac75cee9dd1f97f49e289b083ee6be96268930725685"},
 ]
 
 [package.dependencies]
@@ -904,4 +903,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<4.0"
-content-hash = "e4990ee766e96e85644a6436bc93d9cfc2bf0d38c6b7993d47c0097cb6e627a8"
+content-hash = "813fef70d78e731bd373c790998ab6d3ec3c9f043b1d867b8ba0cb6f9733579a"

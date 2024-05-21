@@ -31,7 +31,7 @@ class GkeDeployment(pulumi.ComponentResource):
                  context: str = ".build",
                  dockerfile: str = "Dockerfile",
                  ksa: ServiceAccount | Output[ServiceAccount] = None,
-                 access_secrets: List[str] = None,
+                 access_secrets: List[str | Tuple[str, dict]] = None,
                  publish_to: Mapping[str, gcp.pubsub.Topic] = None,
                  subscriptions_inject_sidecar: bool = True,
                  subscribe_to: Sequence[Tuple[str, Mapping[str, Any]]] = None,
@@ -90,14 +90,15 @@ class GkeDeployment(pulumi.ComponentResource):
             subscriptions[_name] = sub
 
         env_var_secrets = []
-        google_secrets = []
         if access_secrets is None:
             access_secrets = []
+        #access_secret_names = [x[1].get("secret_name") if isinstance(x, (tuple, list)) else x for x in access_secrets]
+        #envvar_secrets = [x for x in access_secrets if isinstance(x, str)]
+        #mount_secrets = [x[1] for x in access_secrets if isinstance(x, (tuple, list))]
+
         for secret in access_secrets:
             from_env = sane_utils.get_var_for_target(secret)
-            if from_env is None:
-                google_secrets.append(secret),
-            else:
+            if from_env:
                 env_var_secrets.append(
                     EnvVarArgs(
                         name=secret.upper(),
@@ -111,7 +112,7 @@ class GkeDeployment(pulumi.ComponentResource):
             is_workload_iduser=True,
             ksa=ksa,
             namespace=namespace,
-            access_secrets=google_secrets,
+            access_secrets=access_secrets,
             publish_to=publish_to,
             subscribe_to=subscriptions,
             use_firestore=use_firestore,
@@ -238,19 +239,11 @@ class GkeDeployment(pulumi.ComponentResource):
                 ])
 
 
-        # project_number = gcp_resourcemanager_v1.get_project(project=secretmanager_project_id).project_number
-        if access_secrets is None:
-            access_secrets = []
-        for secret in google_secrets:
-            # secret_ref = gcp.secretmanager.get_secret(
-            #     project=secretmanager_project_id,
-            #     secret_id=sane_utils.name_resource(secret)
-            # )
+        for secret in access_secrets:
             repl_secret = secret.replace('-', '_')
             secret_path = sane_utils.get_var_for_target(f"{repl_secret}_secret_path")
             if secret_path is None:
                 secret_path = "projects/{project}/secrets/{secret}/versions/{secret_version}".format(
-                    # project=project_number,
                     project=secretmanager_project_id,
                     secret=sane_utils.name_resource(secret),
                     secret_version=sane_utils.get_var_for_target(f"{repl_secret}_secret_version", default="latest"),
@@ -268,7 +261,6 @@ class GkeDeployment(pulumi.ComponentResource):
         for k_topic, topic in publish_to.items():
             app_container_env.append(
                 EnvVarArgs(
-                    #name=topic.name.apply(lambda _name: f"{_name.replace('-', '_')}_topic".upper()),
                     name=f"{k_topic.replace('-', '_')}_topic".upper(),
                     value=topic.id.apply(lambda _id: _id),
                 )
@@ -306,7 +298,6 @@ class GkeDeployment(pulumi.ComponentResource):
 
         if len(volume_mounts):
             app_container_kwargs["volume_mounts"] = volume_mounts
-
 
         app_container = kubernetes.core.v1.ContainerArgs(
             image=self.image.repo_digest,
