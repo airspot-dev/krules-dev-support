@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "krules-dev-support"
-version = "0.12.23dev0"
+version = "0.12.23"
 description = ""
 authors = ["Airspot <info@airspot.tech>"]
 license = "Apache-2.0"
