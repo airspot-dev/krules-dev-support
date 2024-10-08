@@ -34,6 +34,7 @@ def inject(function):
         _set("project_name", check_env, "project_name")
         _set("project_id", get_project_id)
         _set("cluster_project_id", get_cluster_project_id)
+        _set("cluster_project_number", get_cluster_project_number)
         _set("region", get_region)
         _set("namespace", get_namespace)
         #_set("use_firestore", get_use_firestore)
@@ -78,8 +79,18 @@ def get_project_id(target=None) -> str:
 
 
 @inject
+def get_project_number(target=None) -> int:
+    return int(get_var_for_target("project_number", target))
+
+
+@inject
 def get_cluster_project_id(target=None) -> str:
     return get_var_for_target("cluster_project_id", target=target, default=get_project_id())
+
+
+@inject
+def get_cluster_project_number(target=None) -> int:
+    return int(get_var_for_target("cluster_project_number", target=target, default=get_project_number()))
 
 
 @inject

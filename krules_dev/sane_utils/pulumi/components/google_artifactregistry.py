@@ -13,6 +13,7 @@ class ArtifactRegistry(pulumi.ComponentResource):
     def __init__(self, resource_name: str,
                  project_id: str = None,
                  cluster_project_id: str = None,
+                 cluster_project_number: int = None,
                  region: str = None,
                  format: str = "DOCKER",
                  opts: pulumi.ResourceOptions = None,
@@ -33,7 +34,8 @@ class ArtifactRegistry(pulumi.ComponentResource):
 
         # if the cluster is in another project, the related compute engine sa in authorized to pull images
         if cluster_project_id != project_id:
-            project_number = gcp_resourcemanager_v1.get_project(project=cluster_project_id).project_number
+            if cluster_project_number is None:
+                project_number = gcp_resourcemanager_v1.get_project(project=cluster_project_id).project_number
             # bindings = gcp.organizations.get_iam_policy(
             #     bindings=[gcp.organizations.GetIAMPolicyBindingArgs(
             #         role="roles/artifactregistry.reader",
