@@ -27,6 +27,7 @@ pulumi-google-native = ">=0.31.1"
 # grcpio temporary pinned for pulumi
 grpcio = "~=1.60.1"
 grpcio-status = "~=1.60.1"
+dependency-injector =">=4.40.0,<5.0.0"
 
 [build-system]
 requires = ["poetry-core"]
